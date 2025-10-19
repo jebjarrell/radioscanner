@@ -1,0 +1,95 @@
+{
+  "name": "onthego-scanner",
+  "productName": "OnTheGo Scanner",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Electron + Vite + TypeScript desktop application for the OnTheGo Scanner project.",
+  "author": "OnTheGo Scanner Team",
+  "main": "dist-electron/main/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "backend": "node --import tsx/esm src/backend/server.ts",
+    "build": "npm run lint && npm run typecheck && vite build && electron-builder --linux AppImage --publish=never && node scripts/copy-appimage.mjs",
+    "lint": "eslint . --ext .ts,.tsx,.js,.cjs,.mjs --max-warnings=0",
+    "test": "vitest",
+    "typecheck": "tsc --noEmit",
+    "doctor": "node scripts/test-services.js",
+    "mock": "node scripts/run-mock.mjs",
+    "perf": "node scripts/perf-soak.mjs"
+  },
+  "engines": {
+    "node": ">=18.17.0",
+    "npm": ">=9.0.0"
+  },
+  "dependencies": {
+    "@fastify/cors": "^9.0.0",
+    "@fastify/static": "^8.3.0",
+    "@fastify/websocket": "^10.0.0",
+    "better-sqlite3": "^12.4.1",
+    "fastify": "^4.26.0",
+    "maplibre-gl": "^5.9.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "ws": "^8.18.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/ws": "^8.5.10",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@typescript-eslint/eslint-plugin": "^7.8.0",
+    "@typescript-eslint/parser": "^7.8.0",
+    "@vitejs/plugin-react": "^4.2.0",
+    "electron": "^29.0.0",
+    "electron-builder": "^26.0.12",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-import-resolver-typescript": "3.6.1",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-jsx-a11y": "^6.8.0",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prettier": "^5.1.3",
+    "prettier": "^3.2.5",
+    "tsx": "^4.7.0",
+    "typescript": "5.5.4",
+    "vite": "^5.2.8",
+    "vite-plugin-electron": "^0.28.0",
+    "vite-plugin-electron-renderer": "^0.14.5",
+    "vitest": "^1.5.0"
+  },
+  "build": {
+    "appId": "com.onthego.scanner",
+    "productName": "OnTheGo Scanner",
+    "copyright": "Copyright © 2024 OnTheGo Scanner Team",
+    "directories": {
+      "output": "dist/installers"
+    },
+    "files": [
+      "dist/**",
+      "!dist/**/*.map",
+      "dist-electron/**",
+      "!dist-electron/**/*.map",
+      "package.json"
+    ],
+    "extraMetadata": {
+      "main": "dist-electron/main/index.js"
+    },
+    "linux": {
+      "category": "Utility",
+      "icon": "public/icon.png",
+      "artifactName": "onthego-scanner-${version}-${arch}.AppImage",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "publish": null
+  }
+}
