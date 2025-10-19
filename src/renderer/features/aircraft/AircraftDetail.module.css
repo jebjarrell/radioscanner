@@ -1,0 +1,82 @@
+.panel {
+  position: fixed;
+  top: 72px;
+  right: 24px;
+  width: 340px;
+  background: #ffffff;
+  color: #1f2937;
+  border-radius: 0.75rem;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.35);
+  overflow: hidden;
+  z-index: 2000;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(135deg, #1d4ed8, #312e81);
+  color: #f8fafc;
+}
+
+.header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 1.25rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 120ms ease;
+}
+
+.closeBtn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.content {
+  padding: 1rem 1.25rem;
+  max-height: 480px;
+  overflow-y: auto;
+  background: #f8fafc;
+}
+
+.field {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.field:last-child {
+  border-bottom: none;
+}
+
+.field label {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.field span {
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  color: #334155;
+  text-align: right;
+}
+
+.placeholder {
+  padding: 1rem 1.25rem;
+  color: #475569;
+  background: #f8fafc;
+}

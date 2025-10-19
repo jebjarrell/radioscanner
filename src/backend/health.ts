@@ -62,7 +62,7 @@ export class HealthMonitor extends TypedEventEmitter<HealthEvents> {
   private readonly dump1090: DumpClient;
   private readonly kismet: KismetLikeClient;
   private readonly gps: GpsLikeClient;
-  private readonly telemetryBatcher = new TelemetryBatcher((batch) =>
+  private readonly telemetryBatcher = new TelemetryBatcher<TelemetryRecord>((batch) =>
     this.flushTelemetryBatch(batch),
   );
 
