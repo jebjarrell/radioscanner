@@ -4,6 +4,7 @@ import { GPSD_CONFIG } from '../config/index.js';
 
 import { LAT_MAX, LAT_MIN, LON_MAX, LON_MIN } from './constants.js';
 import { getManualGpsFallback } from './settings.js';
+import { clamp } from './storage/validation.js';
 import { TypedEventEmitter } from './utils/typedEventEmitter.js';
 
 export interface GpsStatus {
@@ -114,8 +115,4 @@ export class GpsClient extends TypedEventEmitter<GpsEvents> {
       timestamp: fix.timestamp,
     };
   }
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }

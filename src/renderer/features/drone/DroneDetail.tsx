@@ -2,7 +2,8 @@ import React from 'react';
 
 import { BACKEND_URL } from '../../../config/client.js';
 import { useSelection } from '../../contexts/SelectionContext';
-import { formatDistance } from '../../utils/geo';
+import { useDistanceUnit } from '../../hooks/useDistanceUnit';
+import { formatDistanceFromKm } from '../../utils/distance';
 import { formatTimeSince } from '../../utils/time';
 
 import styles from './DroneDetail.module.css';
@@ -11,6 +12,7 @@ import { useDrones } from './hooks/useDrones';
 export const DroneDetail: React.FC = () => {
   const drones = useDrones();
   const { selectedDroneId, isDetailPanelOpen, closeDetailPanel } = useSelection();
+  const distanceUnit = useDistanceUnit();
 
   if (!isDetailPanelOpen || !selectedDroneId) {
     return null;
@@ -92,7 +94,9 @@ export const DroneDetail: React.FC = () => {
           {drone.operatorLat != null && drone.operatorLon != null ? (
             <span className={styles.value}>
               {drone.operatorLat.toFixed(5)}, {drone.operatorLon.toFixed(5)}
-              {drone.distance != null ? ` (${formatDistance(drone.distance)} away)` : ''}
+              {drone.distance != null
+                ? ` (${formatDistanceFromKm(drone.distance, distanceUnit)} away)`
+                : ''}
             </span>
           ) : (
             <span className={styles.unavailable}>Unknown (not in Remote ID broadcast)</span>

@@ -283,12 +283,15 @@ async function buildServer(): Promise<FastifyInstance> {
       }
       try {
         client.send(payload);
-      } catch {
+      } catch (err) {
+        // Log send failures even in production
+        console.error('[websocket] Failed to send to client:', err);
         try {
           clients.delete(client);
           client.terminate();
-        } catch {
-          // ignore termination issues
+        } catch (termErr) {
+          // Log termination issues
+          console.error('[websocket] Failed to terminate client:', termErr);
         }
       }
     }

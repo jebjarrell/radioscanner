@@ -17,6 +17,7 @@ import type { GpsFix, GpsStatus } from './gpsClient.js';
 import type { KismetStatus } from './kismetClient.js';
 import type { RtlTcpStatus } from './rtlTcpClient.js';
 import { getManualGpsFallback } from './settings.js';
+import { clamp } from './storage/validation.js';
 import { TypedEventEmitter } from './utils/typedEventEmitter.js';
 
 type Dump1090Events = {
@@ -301,10 +302,6 @@ function createGpsFix(): GpsFix {
     alt,
     timestamp: Date.now(),
   };
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }
 
 function randomHex(): string {

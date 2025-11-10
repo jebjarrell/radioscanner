@@ -1,7 +1,8 @@
 import React from 'react';
 
 import { useSelection } from '../../contexts/SelectionContext';
-import { formatDistance } from '../../utils/geo';
+import { useDistanceUnit } from '../../hooks/useDistanceUnit';
+import { formatDistanceFromKm } from '../../utils/distance';
 import { formatTimeSince } from '../../utils/time';
 
 import styles from './AircraftDetail.module.css';
@@ -10,6 +11,7 @@ import { useAircraft } from './hooks/useAircraft';
 export const AircraftDetail: React.FC = () => {
   const aircraft = useAircraft();
   const { selectedAircraftIcao, isDetailPanelOpen, closeDetailPanel } = useSelection();
+  const distanceUnit = useDistanceUnit();
 
   if (!isDetailPanelOpen || !selectedAircraftIcao) {
     return null;
@@ -75,7 +77,9 @@ export const AircraftDetail: React.FC = () => {
         <div className={styles.field}>
           <label>Distance</label>
           <span>
-            {selected.distance !== undefined ? formatDistance(selected.distance, 'mi') : '—'}
+            {selected.distance !== undefined
+              ? formatDistanceFromKm(selected.distance, distanceUnit)
+              : '—'}
           </span>
         </div>
         <div className={styles.field}>

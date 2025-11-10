@@ -68,14 +68,10 @@ export class RtlTcpClient extends TypedEventEmitter<RtlTcpEvents> {
       this.emit('disconnect');
     });
 
-    let buffer = Buffer.alloc(0);
     this.socket.on('data', (chunk) => {
-      if (!chunk.length) {
-        return;
+      if (chunk.length) {
+        this.emit('iq', chunk);
       }
-      buffer = Buffer.concat([buffer, chunk]);
-      this.emit('iq', buffer);
-      buffer = Buffer.alloc(0);
     });
   }
 }

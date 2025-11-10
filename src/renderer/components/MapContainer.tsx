@@ -30,8 +30,10 @@ export const MapContainer: React.FC = () => {
       onDroneClick: (droneId: string) => selectDrone(droneId),
     });
     return () => {
-      mapPanelRef.current?.dispose();
-      mapPanelRef.current = null;
+      if (mapPanelRef.current) {
+        mapPanelRef.current.dispose();
+        mapPanelRef.current = null;
+      }
     };
   }, [version, selectAircraft, selectDrone, settings]);
 

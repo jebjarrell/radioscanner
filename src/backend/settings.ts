@@ -1,4 +1,5 @@
 import { LAT_MAX, LAT_MIN, LON_MAX, LON_MIN } from './constants.js';
+import { clamp } from './storage/validation.js';
 
 export interface ManualGpsFallback {
   enabled: boolean;
@@ -54,8 +55,4 @@ export function setManualGpsFallback(
   if (updated) {
     fallback.updatedAt = typeof input.updatedAt === 'number' ? input.updatedAt : Date.now();
   }
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }

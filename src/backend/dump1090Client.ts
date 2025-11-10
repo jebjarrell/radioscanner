@@ -13,6 +13,7 @@ import {
   SPEED_MAX_KTS,
   SPEED_MIN_KTS,
 } from './constants.js';
+import { clamp } from './storage/validation.js';
 import { TypedEventEmitter } from './utils/typedEventEmitter.js';
 
 const DEFAULT_URL = `${DUMP1090_CONFIG.baseUrl}/data/aircraft.json`;
@@ -87,10 +88,6 @@ function sanitizeAircraft(entry: Record<string, unknown>): Dump1090Aircraft | nu
   }
 
   return sanitized;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }
 
 function normalizeHeading(value: number): number {

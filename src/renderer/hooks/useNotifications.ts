@@ -3,8 +3,10 @@ import { useEffect, useRef } from 'react';
 import { useTelemetry } from '../contexts/TelemetryContext';
 import { useToast } from '../contexts/ToastContext';
 import { convertDistanceFromKm } from '../utils/distance';
+import { haversineDistance } from '../utils/geo';
 
 import { useSettings } from './useSettings';
+import { useUserPosition } from './useUserPosition';
 
 /**
  * Notification Hook
@@ -14,6 +16,7 @@ export function useNotifications(): void {
   const { telemetry } = useTelemetry();
   const { settings } = useSettings();
   const { showToast } = useToast();
+  const userPosition = useUserPosition();
 
   // Track previous state to detect changes
   const prevDroneIdsRef = useRef<Set<string>>(new Set());
@@ -66,25 +69,14 @@ export function useNotifications(): void {
     }
 
     const aircraft = telemetry.aircraft || [];
-    const DEFAULT_POSITION = { lat: 40.7306, lon: -73.9352 };
 
     for (const ac of aircraft) {
       if (!ac.hex || ac.lat == null || ac.lon == null) {
         continue;
       }
 
-      // Calculate distance using haversine
-      const R = 6371; // Earth radius in km
-      const dLat = ((ac.lat - DEFAULT_POSITION.lat) * Math.PI) / 180;
-      const dLon = ((ac.lon - DEFAULT_POSITION.lon) * Math.PI) / 180;
-      const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos((DEFAULT_POSITION.lat * Math.PI) / 180) *
-          Math.cos((ac.lat * Math.PI) / 180) *
-          Math.sin(dLon / 2) *
-          Math.sin(dLon / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      const distanceKm = R * c;
+      // Calculate distance using haversine utility
+      const distanceKm = haversineDistance(userPosition.lat, userPosition.lon, ac.lat, ac.lon);
 
       // Check if within threshold and not already notified
       if (distanceKm <= proximityThresholdKm && !notifiedAircraftRef.current.has(ac.hex)) {
@@ -101,7 +93,15 @@ export function useNotifications(): void {
         notifiedAircraftRef.current.delete(ac.hex);
       }
     }
-  }, [telemetry, enabled, aircraftProximityEnabled, showToast, duration, proximityThresholdKm]);
+  }, [
+    telemetry,
+    enabled,
+    aircraftProximityEnabled,
+    showToast,
+    duration,
+    proximityThresholdKm,
+    userPosition,
+  ]);
 
   // Monitor signal connection changes
   useEffect(() => {

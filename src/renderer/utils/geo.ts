@@ -13,8 +13,3 @@ export function haversineDistance(lat1: number, lon1: number, lat2: number, lon2
 
   return EARTH_RADIUS_KM * c;
 }
-
-export function formatDistance(distanceKm: number, unit: 'km' | 'mi' = 'mi'): string {
-  const value = unit === 'mi' ? distanceKm * 0.621371 : distanceKm;
-  return `${value.toFixed(1)} ${unit}`;
-}
