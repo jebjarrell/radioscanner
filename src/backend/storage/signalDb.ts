@@ -57,7 +57,11 @@ export class SignalDatabase {
       const ttl = Date.now() - 60 * 60 * 1000;
       this.deleteOldStmt.run(ttl);
     } catch (error) {
-      console.error('Failed to insert signal peak:', { ts, frequencyMHz, dBfs, bandwidthHz }, error);
+      console.error(
+        'Failed to insert signal peak:',
+        { ts, frequencyMHz, dBfs, bandwidthHz },
+        error,
+      );
       // Non-critical: don't throw, allow scanning to continue
     }
   }

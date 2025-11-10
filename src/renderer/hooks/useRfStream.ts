@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
-import { connectWS } from '../services/wsReconnect';
 import { WEBSOCKET_URL } from '../../config/client.js';
+import { connectWS } from '../services/wsReconnect';
 
 export type RfSpectrumFrame = {
   startHz: number;

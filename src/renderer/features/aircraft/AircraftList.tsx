@@ -3,10 +3,11 @@ import React, { useMemo } from 'react';
 import { useSelection } from '../../contexts/SelectionContext';
 import { formatDistance } from '../../utils/geo';
 import { formatTimeSince, isStale } from '../../utils/time';
+
+import styles from './AircraftList.module.css';
 import { useAircraft } from './hooks/useAircraft';
 import { useAircraftSorting } from './hooks/useAircraftSorting';
 import type { SortKey } from './types';
-import styles from './AircraftList.module.css';
 
 const SortHeader: React.FC<{
   label: string;

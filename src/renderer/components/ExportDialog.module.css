@@ -75,7 +75,9 @@
   background: rgba(30, 41, 59, 0.85);
   color: #e2e8f0;
   cursor: pointer;
-  transition: background 150ms ease, border-color 150ms ease;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease;
 }
 
 .primaryButton:hover {

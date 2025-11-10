@@ -1,5 +1,6 @@
-import { TypedEventEmitter } from './utils/typedEventEmitter.js';
 import { KISMET_CONFIG } from '../config/index.js';
+
+import { TypedEventEmitter } from './utils/typedEventEmitter.js';
 
 const STATUS_URL = `${KISMET_CONFIG.baseUrl}/system/status.json`;
 const POLL_INTERVAL_MS = 5_000;

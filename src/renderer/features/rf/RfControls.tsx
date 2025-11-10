@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 
-import { useTelemetry } from '../../contexts/TelemetryContext';
 import { BACKEND_URL } from '../../../config/client.js';
+import { useTelemetry } from '../../contexts/TelemetryContext';
 
 import { RF_BANDS, type RfBandKey } from './bands';
 

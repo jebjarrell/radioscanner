@@ -9,8 +9,7 @@ const ensureDir = (p: string) => {
   }
 };
 
-const SETTINGS_DB_FILE =
-  process.env.SETTINGS_DB_FILE || path.join('.', 'data', 'settings.sqlite');
+const SETTINGS_DB_FILE = process.env.SETTINGS_DB_FILE || path.join('.', 'data', 'settings.sqlite');
 ensureDir(path.dirname(path.resolve(SETTINGS_DB_FILE)));
 
 const settingsDb = new Database(SETTINGS_DB_FILE);

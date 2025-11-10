@@ -38,9 +38,10 @@ export class SettingsDatabase {
   }
 
   getAll(): Record<string, string> {
-    const rows = this.db
-      .prepare(`SELECT key, value FROM user_settings`)
-      .all() as Array<{ key: string; value: string }>;
+    const rows = this.db.prepare(`SELECT key, value FROM user_settings`).all() as Array<{
+      key: string;
+      value: string;
+    }>;
     return rows.reduce<Record<string, string>>((acc, row) => {
       acc[row.key] = row.value;
       return acc;

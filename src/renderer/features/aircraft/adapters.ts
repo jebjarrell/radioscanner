@@ -1,4 +1,5 @@
 import type { TelemetryAircraft } from '../../types';
+
 import type { Aircraft } from './types';
 
 export function fromTelemetry(entry: TelemetryAircraft, now: number): Aircraft | null {

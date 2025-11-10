@@ -1,9 +1,9 @@
 import React from 'react';
 
+import { BACKEND_URL } from '../../../config/client.js';
 import { useSelection } from '../../contexts/SelectionContext';
 import { formatDistance } from '../../utils/geo';
 import { formatTimeSince } from '../../utils/time';
-import { BACKEND_URL } from '../../../config/client.js';
 
 import styles from './DroneDetail.module.css';
 import { useDrones } from './hooks/useDrones';

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import ReactDOM from 'react-dom';
 
 import { BACKEND_URL } from '../../config/client.js';
+
 import styles from './ExportDialog.module.css';
 
 type ExportTable = 'aircraft' | 'drones' | 'signals';
@@ -85,7 +86,12 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose }) =
 
   const dialog = (
     <div className={styles.overlay}>
-      <div className={styles.dialog} role="dialog" aria-modal="true" aria-labelledby="export-dialog-title">
+      <div
+        className={styles.dialog}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="export-dialog-title"
+      >
         <h2 id="export-dialog-title">Export CSV</h2>
         <div className={styles.field}>
           <label htmlFor="export-table">Data Type</label>
@@ -101,7 +107,11 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose }) =
         </div>
         <div className={styles.field}>
           <label htmlFor="export-range">Time Range</label>
-          <select id="export-range" value={range} onChange={(event) => setRange(event.target.value as RangeOption)}>
+          <select
+            id="export-range"
+            value={range}
+            onChange={(event) => setRange(event.target.value as RangeOption)}
+          >
             <option value="all">All Data</option>
             <option value="last-hour">Last Hour</option>
             <option value="custom">Custom Range</option>
@@ -131,10 +141,20 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose }) =
         )}
         {error && <div className={styles.error}>{error}</div>}
         <div className={styles.actions}>
-          <button type="button" onClick={onClose} className={styles.secondaryButton} disabled={busy}>
+          <button
+            type="button"
+            onClick={onClose}
+            className={styles.secondaryButton}
+            disabled={busy}
+          >
             Cancel
           </button>
-          <button type="button" onClick={handleExport} className={styles.primaryButton} disabled={busy}>
+          <button
+            type="button"
+            onClick={handleExport}
+            className={styles.primaryButton}
+            disabled={busy}
+          >
             {busy ? 'Exporting…' : 'Export CSV'}
           </button>
         </div>

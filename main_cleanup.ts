@@ -14,7 +14,11 @@ export function registerCleanup(fn: CleanupFn) {
 
 async function runCleanup() {
   for (const fn of cleanupFns) {
-    try { await fn(); } catch (err) { /* log if you have a logger */ }
+    try {
+      await fn();
+    } catch (err) {
+      /* log if you have a logger */
+    }
   }
 }
 
@@ -29,9 +33,14 @@ function hardShutdown(signal?: string) {
 
 app.on('before-quit', (e) => {
   e.preventDefault(); // we will quit after cleanup
-  const done = () => { app.exit(0); };
+  const done = () => {
+    app.exit(0);
+  };
   const timeout = setTimeout(done, 4000);
-  runCleanup().finally(() => { clearTimeout(timeout); done(); });
+  runCleanup().finally(() => {
+    clearTimeout(timeout);
+    done();
+  });
 });
 
 process.on('SIGTERM', () => hardShutdown('SIGTERM'));

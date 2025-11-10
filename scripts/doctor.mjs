@@ -1,5 +1,5 @@
-import { access } from 'node:fs/promises';
 import { constants } from 'node:fs';
+import { access } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 
@@ -16,7 +16,7 @@ const checkNodeVersion = () => {
   ) {
     return {
       ok: false,
-      message: `Node.js ${reqMajor}.${reqMinor}.${reqPatch}+ required. Detected ${process.versions.node}.`
+      message: `Node.js ${reqMajor}.${reqMinor}.${reqPatch}+ required. Detected ${process.versions.node}.`,
     };
   }
 
@@ -34,13 +34,13 @@ const checkPaths = async () => {
       } catch {
         missing.push(relPath);
       }
-    })
+    }),
   );
 
   if (missing.length > 0) {
     return {
       ok: false,
-      message: `Missing required project paths: ${missing.join(', ')}`
+      message: `Missing required project paths: ${missing.join(', ')}`,
     };
   }
 

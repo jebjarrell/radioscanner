@@ -1,9 +1,10 @@
 import net from 'node:net';
 
+import { GPSD_CONFIG } from '../config/index.js';
+
 import { LAT_MAX, LAT_MIN, LON_MAX, LON_MIN } from './constants.js';
 import { getManualGpsFallback } from './settings.js';
 import { TypedEventEmitter } from './utils/typedEventEmitter.js';
-import { GPSD_CONFIG } from '../config/index.js';
 
 export interface GpsStatus {
   connected: boolean;

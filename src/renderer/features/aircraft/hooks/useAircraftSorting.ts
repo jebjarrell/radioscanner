@@ -18,7 +18,8 @@ export const useAircraftSorting = (aircraft: Aircraft[]) => {
           comparison = compareStrings(a.callsign.toLowerCase(), b.callsign.toLowerCase());
           break;
         case 'distance':
-          comparison = ((a.distance ?? Number.POSITIVE_INFINITY) - (b.distance ?? Number.POSITIVE_INFINITY));
+          comparison =
+            (a.distance ?? Number.POSITIVE_INFINITY) - (b.distance ?? Number.POSITIVE_INFINITY);
           break;
         case 'altitude':
           comparison = a.altitude - b.altitude;

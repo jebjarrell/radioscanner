@@ -5,8 +5,8 @@ import { fileURLToPath } from 'node:url';
 
 import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron';
 
-import type { ServiceKey } from '../types/services.js';
 import { BACKEND_CONFIG } from '../config/index.js';
+import type { ServiceKey } from '../types/services.js';
 
 import { registerCleanup } from './main_cleanup.js';
 

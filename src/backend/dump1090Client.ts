@@ -1,3 +1,5 @@
+import { DUMP1090_CONFIG } from '../config/index.js';
+
 import {
   ALTITUDE_MAX_FT,
   ALTITUDE_MIN_FT,
@@ -12,7 +14,6 @@ import {
   SPEED_MIN_KTS,
 } from './constants.js';
 import { TypedEventEmitter } from './utils/typedEventEmitter.js';
-import { DUMP1090_CONFIG } from '../config/index.js';
 
 const DEFAULT_URL = `${DUMP1090_CONFIG.baseUrl}/data/aircraft.json`;
 const POLL_INTERVAL_MS = 1_000;

@@ -1,7 +1,8 @@
 import net from 'node:net';
 
-import { TypedEventEmitter } from './utils/typedEventEmitter.js';
 import { RTL_TCP_CONFIG } from '../config/index.js';
+
+import { TypedEventEmitter } from './utils/typedEventEmitter.js';
 
 export interface RtlTcpStatus {
   connected: boolean;

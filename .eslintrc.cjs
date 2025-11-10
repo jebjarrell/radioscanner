@@ -3,13 +3,13 @@ module.exports = {
   env: {
     browser: true,
     es2022: true,
-    node: true
+    node: true,
   },
   parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: 'latest',
     sourceType: 'module',
-    project: false
+    project: false,
   },
   plugins: ['@typescript-eslint', 'import', 'prettier'],
   extends: [
@@ -17,14 +17,14 @@ module.exports = {
     'plugin:@typescript-eslint/recommended',
     'plugin:import/recommended',
     'plugin:import/typescript',
-    'plugin:prettier/recommended'
+    'plugin:prettier/recommended',
   ],
   settings: {
     'import/resolver': {
       typescript: {
-        project: ['./tsconfig.json']
-      }
-    }
+        project: ['./tsconfig.json'],
+      },
+    },
   },
   ignorePatterns: ['dist', 'dist-electron', 'node_modules'],
   rules: {
@@ -35,9 +35,9 @@ module.exports = {
         'newlines-between': 'always',
         alphabetize: {
           order: 'asc',
-          caseInsensitive: true
-        }
-      }
-    ]
-  }
+          caseInsensitive: true,
+        },
+      },
+    ],
+  },
 };

@@ -9,6 +9,8 @@ import type { FastifyInstance } from 'fastify';
 import type { WebSocket } from 'ws';
 import { z } from 'zod';
 
+import { BACKEND_CONFIG } from '../config/index.js';
+
 import { HealthMonitor, TelemetryFrame } from './health.js';
 import type { SpectrumFrame } from './sdr/psdEngine.js';
 import { RfController } from './sdr/rfController.js';
@@ -18,7 +20,6 @@ import { SettingsDatabase } from './storage/settingsDb.js';
 import { SignalDatabase } from './storage/signalDb.js';
 import { TelemetryBatcher } from './storage/telemetryBatcher.js';
 import { ICAO, clamp, validateAircraft, type AircraftRecord } from './storage/validation.js';
-import { BACKEND_CONFIG } from '../config/index.js';
 
 const BACKEND_HOST = BACKEND_CONFIG.host;
 const DEFAULT_PORT = 3000;
@@ -239,8 +240,7 @@ async function buildServer(): Promise<FastifyInstance> {
       const allowedHosts = [BACKEND_HOST, 'localhost'];
       if (
         allowedHosts.some(
-          (host) =>
-            origin.startsWith(`http://${host}`) || origin.startsWith(`https://${host}`),
+          (host) => origin.startsWith(`http://${host}`) || origin.startsWith(`https://${host}`),
         )
       ) {
         cb(null, true);

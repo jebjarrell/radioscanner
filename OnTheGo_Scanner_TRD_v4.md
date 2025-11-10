@@ -1,5 +1,7 @@
 # TECHNICAL REQUIREMENTS DOCUMENT (TRD)
+
 ## On-the-Go RF Awareness Scanner
+
 ### Version 1.0 MVP - Linux Implementation
 
 **Document Version:** 2.0  
@@ -141,22 +143,23 @@ System Services (managed by systemd):
 
 ### Core Technologies
 
-| Component | Technology | Version | Purpose |
-|-----------|-----------|---------|---------|
-| **Desktop Framework** | Electron | 28.0+ | Cross-platform desktop app |
-| **Backend Runtime** | Node.js | 18 LTS | JavaScript runtime |
-| **Frontend Framework** | React | 18.2+ | UI component library |
-| **Backend Server** | Fastify | 4.24+ | High-performance HTTP server |
-| **Database** | SQLite3 | 3.40+ | Embedded database |
-| **Database Driver** | better-sqlite3 | 9.0+ | Synchronous SQLite bindings |
-| **Mapping** | MapLibre GL JS | 3.6+ | Interactive maps |
-| **Real-time Communication** | ws (WebSocket) | 8.14+ | Bi-directional communication |
-| **Build Tool** | Webpack | 5.89+ | Module bundling |
-| **Package Manager** | npm | 9.0+ | Dependency management |
+| Component                   | Technology     | Version | Purpose                      |
+| --------------------------- | -------------- | ------- | ---------------------------- |
+| **Desktop Framework**       | Electron       | 28.0+   | Cross-platform desktop app   |
+| **Backend Runtime**         | Node.js        | 18 LTS  | JavaScript runtime           |
+| **Frontend Framework**      | React          | 18.2+   | UI component library         |
+| **Backend Server**          | Fastify        | 4.24+   | High-performance HTTP server |
+| **Database**                | SQLite3        | 3.40+   | Embedded database            |
+| **Database Driver**         | better-sqlite3 | 9.0+    | Synchronous SQLite bindings  |
+| **Mapping**                 | MapLibre GL JS | 3.6+    | Interactive maps             |
+| **Real-time Communication** | ws (WebSocket) | 8.14+   | Bi-directional communication |
+| **Build Tool**              | Webpack        | 5.89+   | Module bundling              |
+| **Package Manager**         | npm            | 9.0+    | Dependency management        |
 
 ### Key Libraries
 
 #### Backend (Node.js)
+
 ```json
 {
   "fastify": "^4.24.0",
@@ -170,6 +173,7 @@ System Services (managed by systemd):
 ```
 
 #### Frontend (React)
+
 ```json
 {
   "react": "^18.2.0",
@@ -181,6 +185,7 @@ System Services (managed by systemd):
 ```
 
 #### Electron
+
 ```json
 {
   "electron": "^28.0.0",
@@ -190,15 +195,15 @@ System Services (managed by systemd):
 
 ### External Dependencies (System Level)
 
-| Service | Package | Version | Install Method |
-|---------|---------|---------|----------------|
-| DUMP1090 | dump1090-mutability | 1.15+ | apt-get |
-| Kismet | kismet | 2022+  | apt-get |
-| SoapySDR (Deferred to vNext) | soapysdr-server | 0.8+ | apt-get |
-| SoapySDR (Deferred to vNext) RTL Module | soapysdr-module-rtlsdr | 0.3+ | apt-get |
-| SoapySDR (Deferred to vNext) HackRF Module | soapysdr-module-hackrf | 0.3+ | apt-get |
-| GPS Daemon | gpsd | 3.20+ | apt-get |
-| GPS Clients | gpsd-clients | 3.20+ | apt-get |
+| Service                                    | Package                | Version | Install Method |
+| ------------------------------------------ | ---------------------- | ------- | -------------- |
+| DUMP1090                                   | dump1090-mutability    | 1.15+   | apt-get        |
+| Kismet                                     | kismet                 | 2022+   | apt-get        |
+| SoapySDR (Deferred to vNext)               | soapysdr-server        | 0.8+    | apt-get        |
+| SoapySDR (Deferred to vNext) RTL Module    | soapysdr-module-rtlsdr | 0.3+    | apt-get        |
+| SoapySDR (Deferred to vNext) HackRF Module | soapysdr-module-hackrf | 0.3+    | apt-get        |
+| GPS Daemon                                 | gpsd                   | 3.20+   | apt-get        |
+| GPS Clients                                | gpsd-clients           | 3.20+   | apt-get        |
 
 ---
 
@@ -209,6 +214,7 @@ System Services (managed by systemd):
 **File:** `electron/main.js`
 
 **Responsibilities:**
+
 - Create and manage application window
 - Handle IPC communication between main and renderer
 - Spawn Node.js backend server as child process
@@ -216,6 +222,7 @@ System Services (managed by systemd):
 - Handle system tray icon (future)
 
 **Key APIs:**
+
 ```javascript
 const { app, BrowserWindow, ipcMain } = require('electron');
 
@@ -228,17 +235,18 @@ const mainWindow = new BrowserWindow({
   webPreferences: {
     nodeIntegration: false,
     contextIsolation: true,
-    preload: path.join(__dirname, 'preload.js')
-  }
+    preload: path.join(__dirname, 'preload.js'),
+  },
 });
 
 // Spawn backend server
 const backend = spawn('node', ['backend/server.js'], {
-  env: { ...process.env, PORT: 3000 }
+  env: { ...process.env, PORT: 3000 },
 });
 ```
 
 **Performance Targets:**
+
 - Window launch time: <2 seconds
 - Memory footprint: <150 MB (main process only)
 
@@ -249,6 +257,7 @@ const backend = spawn('node', ['backend/server.js'], {
 **File:** `backend/server.js`
 
 **Responsibilities:**
+
 - HTTP server for serving frontend assets (development mode)
 - WebSocket server for real-time data streaming
 - Coordinate data collection from external services
@@ -257,6 +266,7 @@ const backend = spawn('node', ['backend/server.js'], {
 - Serve REST API for frontend queries
 
 **Architecture:**
+
 ```javascript
 const fastify = require('fastify')({ logger: true });
 const WebSocket = require('ws');
@@ -276,11 +286,11 @@ setInterval(() => {
     aircraft: dump1090Client.getAircraft(),
     drones: kismetClient.getDrones(),
     signals: sdrClient.getSignals(),
-    gps: gpsClient.getPosition()
+    gps: gpsClient.getPosition(),
   };
-  
+
   // Broadcast to all connected clients
-  wss.clients.forEach(client => {
+  wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(JSON.stringify(aggregatedData));
     }
@@ -291,6 +301,7 @@ fastify.listen({ port: 3000, host: '127.0.0.1' });
 ```
 
 **REST Endpoints:**
+
 - `GET /health` - Health check, returns status of all services
 - `GET /api/aircraft` - Get all aircraft (snapshot)
 - `GET /api/drones` - Get all drones (snapshot)
@@ -302,6 +313,7 @@ fastify.listen({ port: 3000, host: '127.0.0.1' });
 - `POST /api/scan/stop` - Stop spectrum scanning
 
 **Performance Targets:**
+
 - API response time: <50ms (local host)
 - WebSocket message rate: 1 Hz (configurable up to 10 Hz)
 - Concurrent WebSocket connections: 10 (future: remote monitoring)
@@ -318,6 +330,7 @@ fastify.listen({ port: 3000, host: '127.0.0.1' });
 DUMP1090 outputs JSON on TCP port 30003 (SBS text feed) (default). Messages are line-delimited JSON objects.
 
 **Example Message:**
+
 ```json
 {
   "now": 1697452800.12,
@@ -342,6 +355,7 @@ DUMP1090 outputs JSON on TCP port 30003 (SBS text feed) (default). Messages are 
 ```
 
 **Implementation:**
+
 ```javascript
 const net = require('net');
 
@@ -355,7 +369,7 @@ class DUMP1090Client {
 
   connect() {
     this.socket = net.createConnection({ host: this.host, port: this.port });
-    
+
     this.socket.on('data', (data) => {
       try {
         const json = JSON.parse(data.toString());
@@ -406,6 +420,7 @@ module.exports = new DUMP1090Client();
 ```
 
 **Error Handling:**
+
 - Connection failures: Auto-reconnect with exponential backoff
 - Malformed JSON: Log error, skip message, continue
 - Stale aircraft: Remove after 60 seconds without update
@@ -419,17 +434,20 @@ module.exports = new DUMP1090Client();
 **Purpose:** Query Kismet REST API for drone Remote ID detections
 
 **Kismet REST API Endpoints:**
+
 - `http://localhost:2501/devices/all_devices.json` - All detected devices
 - `http://localhost:2501/phy/phy80211/ssids.json` - WiFi SSIDs (future)
 - `http://localhost:2501/phy/BLUETOOTH/devices.json` - Bluetooth devices
 
 **Remote ID Detection:**
 Kismet detects Remote ID broadcasts as Bluetooth devices with specific service UUIDs:
+
 - Service UUID: `0xFFFA` (ASTM Remote ID)
 - Device type: `BLUETOOTH_LE`
 - Advertisement contains Remote ID payload
 
 **Implementation:**
+
 ```javascript
 const fetch = require('node-fetch');
 
@@ -444,15 +462,15 @@ class KismetClient {
     try {
       const response = await fetch(`${this.baseUrl}/phy/BLUETOOTH/devices.json`);
       const devices = await response.json();
-      
-      devices.forEach(device => {
+
+      devices.forEach((device) => {
         // Filter for Remote ID devices
         if (this.isRemoteID(device)) {
           const remoteIdData = this.parseRemoteID(device);
           if (remoteIdData) {
             this.drones.set(remoteIdData.droneId, {
               ...remoteIdData,
-              lastSeen: Date.now()
+              lastSeen: Date.now(),
             });
           }
         }
@@ -496,7 +514,7 @@ class KismetClient {
       speed: location?.speed,
       heading: location?.heading,
       heightAgl: location?.heightAgl,
-      timestampAccuracy: location?.timestampAccuracy
+      timestampAccuracy: location?.timestampAccuracy,
     };
   }
 
@@ -520,7 +538,7 @@ class KismetClient {
         speed: advData.location.speed,
         heading: advData.location.heading,
         heightAgl: advData.location.height,
-        timestampAccuracy: advData.location.timestamp_accuracy
+        timestampAccuracy: advData.location.timestamp_accuracy,
       };
     }
     return null;
@@ -532,7 +550,7 @@ class KismetClient {
       return {
         lat: advData.system.operator_location.latitude,
         lon: advData.system.operator_location.longitude,
-        altitude: advData.system.operator_location.altitude
+        altitude: advData.system.operator_location.altitude,
       };
     }
     return null;
@@ -570,6 +588,7 @@ module.exports = new KismetClient();
 
 **Configuration:**
 Kismet must be configured to monitor Bluetooth:
+
 ```bash
 # /etc/kismet/kismet.conf (or ~/.kismet/kismet.conf)
 source=hci0:name=BluetoothAdapter
@@ -587,6 +606,7 @@ source=hci0:name=BluetoothAdapter
 
 **SoapySDR (Deferred to vNext) Server:**
 SoapySDR (Deferred to vNext) Server provides a network interface to SDR hardware. It can be run as:
+
 ```bash
 SoapySDRServer --bind="127.0.0.1:55132"
 ```
@@ -594,6 +614,7 @@ SoapySDRServer --bind="127.0.0.1:55132"
 Or spawned programmatically by the Node.js backend.
 
 **SDR Client Implementation:**
+
 ```javascript
 const net = require('net');
 const FFT = require('fft.js');
@@ -630,7 +651,7 @@ class SDRClient {
     // Convert to complex float samples
     const samples = new Float32Array(this.fftSize * 2);
     for (let i = 0; i < this.fftSize; i++) {
-      samples[i * 2] = (data[i * 2] - 127.5) / 127.5;     // I (real)
+      samples[i * 2] = (data[i * 2] - 127.5) / 127.5; // I (real)
       samples[i * 2 + 1] = (data[i * 2 + 1] - 127.5) / 127.5; // Q (imaginary)
     }
 
@@ -647,7 +668,7 @@ class SDRClient {
     }
 
     // Convert to dBFS (decibels relative to full scale)
-    const spectrumDb = spectrum.map(val => 20 * Math.log10(val + 1e-10));
+    const spectrumDb = spectrum.map((val) => 20 * Math.log10(val + 1e-10));
 
     // Add to waterfall buffer
     this.waterfallBuffer.push(spectrumDb);
@@ -667,9 +688,9 @@ class SDRClient {
     for (let i = 10; i < spectrumDb.length - 10; i++) {
       if (spectrumDb[i] > threshold) {
         // Check if this is a local maximum
-        const isPeak = spectrumDb.slice(i - 5, i + 5).every((val, idx) => 
-          idx === 5 || val <= spectrumDb[i]
-        );
+        const isPeak = spectrumDb
+          .slice(i - 5, i + 5)
+          .every((val, idx) => idx === 5 || val <= spectrumDb[i]);
 
         if (isPeak) {
           const frequency = this.centerFreq + (i - this.fftSize / 2) * binWidth;
@@ -677,7 +698,7 @@ class SDRClient {
             frequency: frequency / 1e6, // Convert to MHz
             signalStrength: spectrumDb[i],
             bandwidth: this.estimateBandwidth(spectrumDb, i, binWidth),
-            timestamp: Date.now()
+            timestamp: Date.now(),
           });
         }
       }
@@ -706,10 +727,8 @@ class SDRClient {
     const unique = [];
     signals.sort((a, b) => a.frequency - b.frequency);
 
-    signals.forEach(sig => {
-      const existing = unique.find(u => 
-        Math.abs(u.frequency - sig.frequency) < toleranceMHz
-      );
+    signals.forEach((sig) => {
+      const existing = unique.find((u) => Math.abs(u.frequency - sig.frequency) < toleranceMHz);
       if (!existing) {
         unique.push(sig);
       } else if (sig.signalStrength > existing.signalStrength) {
@@ -742,26 +761,26 @@ class SDRClient {
 
   getBandCenterFreq(band) {
     const bands = {
-      'cb': 27.185e6,           // 27.185 MHz (CB center)
-      'airband': 121.5e6,       // 121.5 MHz (Airband center)
-      'marine': 156.8e6,        // 156.8 MHz (Marine Ch 16)
-      'noaa': 162.475e6,        // 162.475 MHz (NOAA center)
-      'frs_gmrs': 462.5625e6,   // 462.5625 MHz (FRS/GMRS center)
-      'ham_2m': 146e6,          // 146 MHz (Ham 2m center)
-      'ham_70cm': 435e6         // 435 MHz (Ham 70cm center)
+      cb: 27.185e6, // 27.185 MHz (CB center)
+      airband: 121.5e6, // 121.5 MHz (Airband center)
+      marine: 156.8e6, // 156.8 MHz (Marine Ch 16)
+      noaa: 162.475e6, // 162.475 MHz (NOAA center)
+      frs_gmrs: 462.5625e6, // 462.5625 MHz (FRS/GMRS center)
+      ham_2m: 146e6, // 146 MHz (Ham 2m center)
+      ham_70cm: 435e6, // 435 MHz (Ham 70cm center)
     };
     return bands[band] || 100e6;
   }
 
   calculateBandwidth(band) {
     const bandwidths = {
-      'cb': 440e3,              // 440 kHz (40 channels * 10 kHz)
-      'airband': 25e6,          // 25 MHz (full airband)
-      'marine': 6e6,            // 6 MHz (Marine VHF)
-      'noaa': 150e3,            // 150 kHz (7 channels)
-      'frs_gmrs': 5e6,          // 5 MHz
-      'ham_2m': 4e6,            // 4 MHz
-      'ham_70cm': 30e6          // 30 MHz
+      cb: 440e3, // 440 kHz (40 channels * 10 kHz)
+      airband: 25e6, // 25 MHz (full airband)
+      marine: 6e6, // 6 MHz (Marine VHF)
+      noaa: 150e3, // 150 kHz (7 channels)
+      frs_gmrs: 5e6, // 5 MHz
+      ham_2m: 4e6, // 4 MHz
+      ham_70cm: 30e6, // 30 MHz
     };
     return bandwidths[band] || 2.4e6;
   }
@@ -773,7 +792,7 @@ class SDRClient {
   getSignals() {
     // Remove signals older than 5 seconds
     const now = Date.now();
-    this.signals = this.signals.filter(s => now - s.timestamp < 5000);
+    this.signals = this.signals.filter((s) => now - s.timestamp < 5000);
     return this.signals;
   }
 
@@ -802,7 +821,7 @@ class SDRClient {
     const lines = output.split('\n');
     let currentDevice = null;
 
-    lines.forEach(line => {
+    lines.forEach((line) => {
       if (line.includes('Found device')) {
         if (currentDevice) devices.push(currentDevice);
         currentDevice = {};
@@ -823,15 +842,18 @@ module.exports = new SDRClient();
 
 **Alternative: rtl_tcp**
 For MVP simplicity, we use `rtl_tcp` instead of SoapySDRServer:
+
 ```bash
 rtl_tcp -a 127.0.0.1 -p 1234 -f 121500000 -s 2400000
 ```
+
 - `-a`: Bind address
 - `-p`: Port
 - `-f`: Center frequency (Hz)
 - `-s`: Sample rate (Hz)
 
 **Performance:**
+
 - FFT rate: 10 Hz (100ms per FFT)
 - FFT size: 2048 bins
 - Signal detection latency: <200ms
@@ -848,6 +870,7 @@ rtl_tcp -a 127.0.0.1 -p 1234 -f 121500000 -s 2400000
 gpsd provides JSON output on TCP port 2947 (default).
 
 **Example Messages:**
+
 ```json
 {"class":"VERSION","release":"3.22","rev":"3.22","proto_major":3,"proto_minor":14}
 {"class":"DEVICES","devices":[{"class":"DEVICE","path":"/dev/ttyUSB0","driver":"SiRF"}]}
@@ -855,6 +878,7 @@ gpsd provides JSON output on TCP port 2947 (default).
 ```
 
 **Implementation:**
+
 ```javascript
 const net = require('net');
 
@@ -881,7 +905,7 @@ class GPSClient {
       const lines = buffer.split('\n');
       buffer = lines.pop(); // Keep incomplete line in buffer
 
-      lines.forEach(line => {
+      lines.forEach((line) => {
         if (line.trim()) {
           try {
             const json = JSON.parse(line);
@@ -912,7 +936,7 @@ class GPSClient {
         speed: tpv.speed || null,
         heading: tpv.track || null,
         time: tpv.time,
-        mode: tpv.mode // 2=2D fix, 3=3D fix
+        mode: tpv.mode, // 2=2D fix, 3=3D fix
       };
       this.hasFix = true;
     } else {
@@ -933,6 +957,7 @@ module.exports = new GPSClient();
 ```
 
 **GPS Fix Modes:**
+
 - Mode 0: No fix
 - Mode 1: No fix (but gpsd is running)
 - Mode 2: 2D fix (lat/lon only)
@@ -945,6 +970,7 @@ module.exports = new GPSClient();
 **Directory:** `src/`
 
 #### Component Hierarchy
+
 ```
 App
 ├── StatusBar (GPS, DUMP1090, Kismet, SDR status)
@@ -965,6 +991,7 @@ App
 #### Key Components
 
 **App.jsx**
+
 ```javascript
 import React, { useEffect, useState } from 'react';
 import MapView from './components/MapView';
@@ -977,14 +1004,14 @@ function App() {
     aircraft: [],
     drones: [],
     signals: [],
-    gps: null
+    gps: null,
   });
 
   const [serviceStatus, setServiceStatus] = useState({
     dump1090: false,
     kismet: false,
     sdr: false,
-    gps: false
+    gps: false,
   });
 
   useEffect(() => {
@@ -1016,16 +1043,8 @@ function App() {
   return (
     <div className="app">
       <StatusBar status={serviceStatus} />
-      <MapView 
-        aircraft={wsData.aircraft} 
-        drones={wsData.drones}
-        userPosition={wsData.gps}
-      />
-      <Dashboard 
-        aircraft={wsData.aircraft}
-        drones={wsData.drones}
-        signals={wsData.signals}
-      />
+      <MapView aircraft={wsData.aircraft} drones={wsData.drones} userPosition={wsData.gps} />
+      <Dashboard aircraft={wsData.aircraft} drones={wsData.drones} signals={wsData.signals} />
       <WaterfallView />
     </div>
   );
@@ -1035,6 +1054,7 @@ export default App;
 ```
 
 **MapView.jsx**
+
 ```javascript
 import React, { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
@@ -1046,7 +1066,7 @@ function MapView({ aircraft, drones, userPosition }) {
   const markers = useRef({
     aircraft: new Map(),
     drones: new Map(),
-    user: null
+    user: null,
   });
 
   useEffect(() => {
@@ -1056,7 +1076,7 @@ function MapView({ aircraft, drones, userPosition }) {
       container: mapContainer.current,
       style: 'https://demotiles.maplibre.org/style.json', // TODO: Replace with offline tiles
       center: [-122.4194, 37.7749], // Default: San Francisco
-      zoom: 10
+      zoom: 10,
     });
 
     map.current.addControl(new maplibregl.NavigationControl());
@@ -1066,7 +1086,7 @@ function MapView({ aircraft, drones, userPosition }) {
     if (!map.current) return;
 
     // Update aircraft markers
-    const currentAircraftIds = new Set(aircraft.map(ac => ac.icao));
+    const currentAircraftIds = new Set(aircraft.map((ac) => ac.icao));
 
     // Remove stale markers
     markers.current.aircraft.forEach((marker, icao) => {
@@ -1077,7 +1097,7 @@ function MapView({ aircraft, drones, userPosition }) {
     });
 
     // Add/update markers
-    aircraft.forEach(ac => {
+    aircraft.forEach((ac) => {
       if (ac.lat && ac.lon) {
         let marker = markers.current.aircraft.get(ac.icao);
         if (!marker) {
@@ -1086,11 +1106,13 @@ function MapView({ aircraft, drones, userPosition }) {
           el.innerHTML = '✈️';
           marker = new maplibregl.Marker(el)
             .setLngLat([ac.lon, ac.lat])
-            .setPopup(new maplibregl.Popup().setHTML(
-              `<strong>${ac.callsign || ac.icao}</strong><br>
+            .setPopup(
+              new maplibregl.Popup().setHTML(
+                `<strong>${ac.callsign || ac.icao}</strong><br>
                Alt: ${ac.altitude} ft<br>
-               Speed: ${ac.speed} kts`
-            ))
+               Speed: ${ac.speed} kts`,
+              ),
+            )
             .addTo(map.current);
           markers.current.aircraft.set(ac.icao, marker);
         } else {
@@ -1104,7 +1126,7 @@ function MapView({ aircraft, drones, userPosition }) {
     if (!map.current) return;
 
     // Update drone markers (similar to aircraft)
-    const currentDroneIds = new Set(drones.map(d => d.droneId));
+    const currentDroneIds = new Set(drones.map((d) => d.droneId));
 
     markers.current.drones.forEach((marker, id) => {
       if (!currentDroneIds.has(id)) {
@@ -1113,7 +1135,7 @@ function MapView({ aircraft, drones, userPosition }) {
       }
     });
 
-    drones.forEach(drone => {
+    drones.forEach((drone) => {
       if (drone.droneLat && drone.droneLon) {
         let marker = markers.current.drones.get(drone.droneId);
         if (!marker) {
@@ -1122,11 +1144,13 @@ function MapView({ aircraft, drones, userPosition }) {
           el.innerHTML = '🚁';
           marker = new maplibregl.Marker(el)
             .setLngLat([drone.droneLon, drone.droneLat])
-            .setPopup(new maplibregl.Popup().setHTML(
-              `<strong>Drone: ${drone.manufacturer || 'Unknown'}</strong><br>
+            .setPopup(
+              new maplibregl.Popup().setHTML(
+                `<strong>Drone: ${drone.manufacturer || 'Unknown'}</strong><br>
                Alt: ${drone.droneAltitude} m<br>
-               Operator: ${drone.operatorLat ? `${drone.operatorLat.toFixed(5)}, ${drone.operatorLon.toFixed(5)}` : 'Unknown'}`
-            ))
+               Operator: ${drone.operatorLat ? `${drone.operatorLat.toFixed(5)}, ${drone.operatorLon.toFixed(5)}` : 'Unknown'}`,
+              ),
+            )
             .addTo(map.current);
           markers.current.drones.set(drone.droneId, marker);
         } else {
@@ -1163,20 +1187,25 @@ function MapView({ aircraft, drones, userPosition }) {
     }
   }, [userPosition]);
 
-  return <div ref={mapContainer} className="map-container" style={{ width: '100%', height: '400px' }} />;
+  return (
+    <div ref={mapContainer} className="map-container" style={{ width: '100%', height: '400px' }} />
+  );
 }
 
 export default MapView;
 ```
 
 **Dashboard.jsx**
+
 ```javascript
 import React from 'react';
 
 function Dashboard({ aircraft, drones, signals }) {
   const aircraftByType = {
-    commercial: aircraft.filter(ac => ac.callsign && /[A-Z]{3}\d{1,4}/.test(ac.callsign)).length,
-    private: aircraft.length - aircraft.filter(ac => ac.callsign && /[A-Z]{3}\d{1,4}/.test(ac.callsign)).length
+    commercial: aircraft.filter((ac) => ac.callsign && /[A-Z]{3}\d{1,4}/.test(ac.callsign)).length,
+    private:
+      aircraft.length -
+      aircraft.filter((ac) => ac.callsign && /[A-Z]{3}\d{1,4}/.test(ac.callsign)).length,
   };
 
   const dronesByManufacturer = drones.reduce((acc, drone) => {
@@ -1197,7 +1226,8 @@ function Dashboard({ aircraft, drones, signals }) {
         <h3>Aircraft Detected</h3>
         <div className="stat-value">{aircraft.length}</div>
         <div className="stat-details">
-          ✈️ Commercial: {aircraftByType.commercial}<br />
+          ✈️ Commercial: {aircraftByType.commercial}
+          <br />
           🛩️ Private: {aircraftByType.private}
         </div>
       </div>
@@ -1207,7 +1237,9 @@ function Dashboard({ aircraft, drones, signals }) {
         <div className="stat-value">{drones.length}</div>
         <div className="stat-details">
           {Object.entries(dronesByManufacturer).map(([mfg, count]) => (
-            <div key={mfg}>🚁 {mfg}: {count}</div>
+            <div key={mfg}>
+              🚁 {mfg}: {count}
+            </div>
           ))}
         </div>
       </div>
@@ -1217,7 +1249,9 @@ function Dashboard({ aircraft, drones, signals }) {
         <div className="stat-value">{signals.length}</div>
         <div className="stat-details">
           {Object.entries(signalsByBand).map(([band, count]) => (
-            <div key={band}>📻 {band}: {count}</div>
+            <div key={band}>
+              📻 {band}: {count}
+            </div>
           ))}
         </div>
       </div>
@@ -1245,6 +1279,7 @@ export default Dashboard;
 ```
 
 **WaterfallView.jsx**
+
 ```javascript
 import React, { useEffect, useRef, useState } from 'react';
 
@@ -1307,7 +1342,7 @@ function WaterfallView() {
       await fetch('http://localhost:3000/api/scan/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ band })
+        body: JSON.stringify({ band }),
       });
       setIsScanning(true);
     }
@@ -1317,9 +1352,7 @@ function WaterfallView() {
     <div className="waterfall-view">
       <h3>▼ Waterfall View</h3>
       <canvas ref={canvasRef} width={1200} height={300} />
-      <button onClick={toggleScan}>
-        {isScanning ? '■ Stop' : '▶ Start Scan'}
-      </button>
+      <button onClick={toggleScan}>{isScanning ? '■ Stop' : '▶ Start Scan'}</button>
     </div>
   );
 }
@@ -1334,7 +1367,9 @@ export default WaterfallView;
 ### Service Configuration
 
 #### DUMP1090 Configuration
+
 **File:** `/etc/default/dump1090-mutability`
+
 ```bash
 # Enable network output
 NET_OPTIONS="--net --net-sbs-port 30003 (SBS text feed)"
@@ -1348,13 +1383,16 @@ LON=-122.4194
 ```
 
 **Systemd Service:**
+
 ```bash
 sudo systemctl enable dump1090-mutability
 sudo systemctl start dump1090-mutability
 ```
 
 #### Kismet Configuration
+
 **File:** `/etc/kismet/kismet.conf` or `~/.kismet/kismet.conf`
+
 ```
 # Bluetooth data source
 source=hci0:name=BluetoothAdapter
@@ -1372,17 +1410,21 @@ log_types=
 ```
 
 **Start Kismet (headless):**
+
 ```bash
 kismet --daemonize --silent
 ```
 
 **User must be in kismet group:**
+
 ```bash
 sudo usermod -aG kismet $USER
 ```
 
 #### gpsd Configuration
+
 **File:** `/etc/default/gpsd`
+
 ```bash
 # Start gpsd automatically
 START_DAEMON="true"
@@ -1398,13 +1440,16 @@ GPSD_SOCKET="/var/run/gpsd.sock"
 ```
 
 **Auto-start:**
+
 ```bash
 sudo systemctl enable gpsd
 sudo systemctl start gpsd
 ```
 
 #### SoapySDR (Deferred to vNext) / rtl_tcp
+
 For MVP, use `rtl_tcp` which is part of `rtl-sdr` package:
+
 ```bash
 # No configuration file needed
 # Start manually or via backend:
@@ -1418,9 +1463,11 @@ rtl_tcp -a 127.0.0.1 -p 1234
 ### Backend REST API
 
 #### GET /health
+
 **Description:** Health check for all external services
 
 **Response:**
+
 ```json
 {
   "dump1090": true,
@@ -1432,9 +1479,11 @@ rtl_tcp -a 127.0.0.1 -p 1234
 ```
 
 #### GET /api/devices
+
 **Description:** List detected SDR devices
 
 **Response:**
+
 ```json
 {
   "devices": [
@@ -1454,9 +1503,11 @@ rtl_tcp -a 127.0.0.1 -p 1234
 ```
 
 #### POST /api/scan/start
+
 **Description:** Start spectrum scanning
 
 **Request Body:**
+
 ```json
 {
   "band": "airband",
@@ -1465,6 +1516,7 @@ rtl_tcp -a 127.0.0.1 -p 1234
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -1474,9 +1526,11 @@ rtl_tcp -a 127.0.0.1 -p 1234
 ```
 
 #### POST /api/scan/stop
+
 **Description:** Stop spectrum scanning
 
 **Response:**
+
 ```json
 {
   "success": true
@@ -1484,9 +1538,11 @@ rtl_tcp -a 127.0.0.1 -p 1234
 ```
 
 #### GET /api/waterfall
+
 **Description:** Get current waterfall buffer
 
 **Response:**
+
 ```json
 {
   "waterfall": [
@@ -1500,9 +1556,11 @@ rtl_tcp -a 127.0.0.1 -p 1234
 ```
 
 #### POST /api/export
+
 **Description:** Export session data to CSV
 
 **Request Body:**
+
 ```json
 {
   "path": "/home/user/exports/"
@@ -1510,6 +1568,7 @@ rtl_tcp -a 127.0.0.1 -p 1234
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -1526,6 +1585,7 @@ rtl_tcp -a 127.0.0.1 -p 1234
 **Endpoint:** `ws://localhost:3001`
 
 **Message Format (Server → Client):**
+
 ```json
 {
   "aircraft": [
@@ -1544,7 +1604,7 @@ rtl_tcp -a 127.0.0.1 -p 1234
     {
       "droneId": "DJI-ABC123",
       "manufacturer": "DJI",
-      "droneLat": 37.7750,
+      "droneLat": 37.775,
       "droneLon": -122.4195,
       "droneAltitude": 50,
       "operatorLat": 37.7748,
@@ -1580,6 +1640,7 @@ rtl_tcp -a 127.0.0.1 -p 1234
 ### SQLite Database: `rfscanner.db`
 
 #### Table: aircraft
+
 ```sql
 CREATE TABLE aircraft (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1601,6 +1662,7 @@ CREATE INDEX idx_aircraft_last_seen ON aircraft(last_seen);
 ```
 
 #### Table: drones
+
 ```sql
 CREATE TABLE drones (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1626,6 +1688,7 @@ CREATE INDEX idx_drones_last_seen ON drones(last_seen);
 ```
 
 #### Table: rf_signals
+
 ```sql
 CREATE TABLE rf_signals (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1645,6 +1708,7 @@ CREATE INDEX idx_signals_timestamp ON rf_signals(timestamp);
 ```
 
 #### Table: user_settings (persistent)
+
 ```sql
 CREATE TABLE user_settings (
     key TEXT PRIMARY KEY,
@@ -1664,6 +1728,7 @@ INSERT OR IGNORE INTO user_settings (key, value) VALUES
 ### Database Operations
 
 **Initialize Database:**
+
 ```javascript
 const Database = require('better-sqlite3');
 const db = new Database('rfscanner.db');
@@ -1673,6 +1738,7 @@ db.exec(fs.readFileSync('schema.sql', 'utf8'));
 ```
 
 **Insert Aircraft:**
+
 ```javascript
 const stmt = db.prepare(`
   INSERT OR REPLACE INTO aircraft 
@@ -1690,11 +1756,12 @@ stmt.run(
   aircraft.lon,
   aircraft.verticalRate,
   aircraft.squawk,
-  Date.now()
+  Date.now(),
 );
 ```
 
 **Clear Session Data:**
+
 ```javascript
 db.exec('DELETE FROM aircraft');
 db.exec('DELETE FROM drones');
@@ -1702,6 +1769,7 @@ db.exec('DELETE FROM rf_signals');
 ```
 
 **Export to CSV:**
+
 ```javascript
 const fs = require('fs');
 
@@ -1709,7 +1777,10 @@ function exportAircraft(outputPath) {
   const rows = db.prepare('SELECT * FROM aircraft ORDER BY last_seen DESC').all();
   const csv = [
     'ICAO,Callsign,Altitude,Speed,Heading,Latitude,Longitude,LastSeen',
-    ...rows.map(r => `${r.icao},${r.callsign},${r.altitude},${r.speed},${r.heading},${r.lat},${r.lon},${new Date(r.last_seen).toISOString()}`)
+    ...rows.map(
+      (r) =>
+        `${r.icao},${r.callsign},${r.altitude},${r.speed},${r.heading},${r.lat},${r.lon},${new Date(r.last_seen).toISOString()}`,
+    ),
   ].join('\n');
   fs.writeFileSync(outputPath, csv);
 }
@@ -1792,16 +1863,19 @@ onthego-scanner/
 ### Development Setup
 
 **Prerequisites:**
+
 - Node.js 18 LTS
 - npm 9+
 - System dependencies (installed via setup.sh)
 
 **Install Node Dependencies:**
+
 ```bash
 npm install
 ```
 
 **Start Development Server:**
+
 ```bash
 # Terminal 1: Backend
 npm run backend
@@ -1816,15 +1890,18 @@ npm run electron:dev
 ### Production Build
 
 **Build Electron App:**
+
 ```bash
 npm run build
 ```
 
 This runs:
+
 1. Webpack production build (frontend → `dist/`)
 2. electron-builder (creates .deb, AppImage)
 
 **Output:**
+
 ```
 dist/
 ├── OnTheGoScanner_1.0.0_amd64.deb
@@ -1897,12 +1974,14 @@ dist/
 ### Recommended IDE: VS Code
 
 **Extensions:**
+
 - ESLint
 - Prettier
 - JavaScript Debugger
 - React Developer Tools
 
 **VS Code Launch Configuration (.vscode/launch.json):**
+
 ```json
 {
   "version": "0.2.0",
@@ -1930,6 +2009,7 @@ dist/
 ### Code Style
 
 **ESLint Config (.eslintrc.json):**
+
 ```json
 {
   "env": {
@@ -1937,10 +2017,7 @@ dist/
     "node": true,
     "es2021": true
   },
-  "extends": [
-    "eslint:recommended",
-    "plugin:react/recommended"
-  ],
+  "extends": ["eslint:recommended", "plugin:react/recommended"],
   "parserOptions": {
     "ecmaVersion": 12,
     "sourceType": "module",
@@ -1962,6 +2039,7 @@ dist/
 ### Unit Tests (Jest)
 
 **Backend Tests:**
+
 ```javascript
 // tests/backend/dump1090-client.test.js
 const DUMP1090Client = require('../../backend/clients/dump1090-client');
@@ -1975,11 +2053,11 @@ describe('DUMP1090Client', () => {
           flight: 'UAL123  ',
           lat: 37.7749,
           lon: -122.4194,
-          altitude: 35000
-        }
-      ]
+          altitude: 35000,
+        },
+      ],
     };
-    
+
     // Simulate receiving data
     const parsed = DUMP1090Client.parseAircraftJSON(json);
     expect(parsed).toHaveLength(1);
@@ -1991,7 +2069,7 @@ describe('DUMP1090Client', () => {
     // Add aircraft
     DUMP1090Client.aircraft.set('a12345', {
       icao: 'a12345',
-      lastSeen: Date.now() - 70000 // 70 seconds ago
+      lastSeen: Date.now() - 70000, // 70 seconds ago
     });
 
     const active = DUMP1090Client.getAircraft();
@@ -2001,6 +2079,7 @@ describe('DUMP1090Client', () => {
 ```
 
 **Frontend Tests:**
+
 ```javascript
 // tests/frontend/MapView.test.jsx
 import { render, screen } from '@testing-library/react';
@@ -2013,9 +2092,7 @@ describe('MapView', () => {
   });
 
   test('displays aircraft markers', () => {
-    const aircraft = [
-      { icao: 'a12345', callsign: 'UAL123', lat: 37.7749, lon: -122.4194 }
-    ];
+    const aircraft = [{ icao: 'a12345', callsign: 'UAL123', lat: 37.7749, lon: -122.4194 }];
     render(<MapView aircraft={aircraft} drones={[]} userPosition={null} />);
     // Verify marker is rendered (requires mocking MapLibre)
   });
@@ -2025,6 +2102,7 @@ describe('MapView', () => {
 ### Integration Tests
 
 **Test External Service Connections:**
+
 ```bash
 # Test DUMP1090 connectivity
 curl http://localhost:30003 (SBS text feed)
@@ -2039,6 +2117,7 @@ gpspipe -w -n 5
 ### Manual Testing Checklist
 
 **Pre-Release QA:**
+
 - [ ] Install on clean Ubuntu 20.04 VM
 - [ ] Run setup.sh and verify all services start
 - [ ] Plug in RTL-SDR, verify detection
@@ -2059,16 +2138,19 @@ gpspipe -w -n 5
 ### Frontend Performance
 
 **React Optimization:**
+
 - Use `React.memo()` for expensive components (MapView, WaterfallView)
 - Debounce WebSocket updates (batch state updates)
 - Virtualize long lists (aircraft/drone lists >100 items)
 
 **MapLibre Optimization:**
+
 - Cluster markers when >50 aircraft visible
 - Reduce marker detail when zoomed out
 - Lazy load map tiles
 
 **Waterfall Optimization:**
+
 - Use OffscreenCanvas for FFT rendering (if supported)
 - Limit waterfall buffer to 100 lines (10 seconds at 10 Hz)
 - Throttle canvas redraws to 30 FPS max
@@ -2076,11 +2158,13 @@ gpspipe -w -n 5
 ### Backend Performance
 
 **Node.js Optimization:**
+
 - Use worker threads for FFT processing (prevents blocking main thread)
 - Connection pooling for external services (reuse sockets)
 - LRU cache for frequently accessed data (bandplan lookup)
 
 **Database Optimization:**
+
 - Prepared statements for repeated queries
 - Indexes on frequently queried columns (last_seen, frequency)
 - Batch inserts (insert 10 signals at once, not individually)
@@ -2088,12 +2172,14 @@ gpspipe -w -n 5
 ### Memory Management
 
 **Target Memory Usage:**
+
 - Electron Main: <150 MB
 - Electron Renderer: <300 MB
 - Node.js Backend: <200 MB
 - **Total:** <650 MB
 
 **Memory Leak Prevention:**
+
 - Clear interval timers on component unmount
 - Remove event listeners when sockets close
 - Limit buffer sizes (waterfall, signals)
@@ -2157,9 +2243,9 @@ Run `npm audit` regularly to check for vulnerable dependencies.
       "mode": "AM",
       "channels": 760,
       "notable_frequencies": [
-        {"freq": 121.5, "label": "Emergency"},
-        {"freq": 122.8, "label": "Unicom"},
-        {"freq": 123.45, "label": "Air-to-air"}
+        { "freq": 121.5, "label": "Emergency" },
+        { "freq": 122.8, "label": "Unicom" },
+        { "freq": 123.45, "label": "Air-to-air" }
       ]
     },
     {
@@ -2168,9 +2254,7 @@ Run `npm audit` regularly to check for vulnerable dependencies.
       "start_mhz": 144.0,
       "end_mhz": 148.0,
       "mode": "FM/SSB/CW",
-      "notable_frequencies": [
-        {"freq": 146.52, "label": "National Simplex Calling"}
-      ]
+      "notable_frequencies": [{ "freq": 146.52, "label": "National Simplex Calling" }]
     },
     {
       "name": "marine",
@@ -2180,8 +2264,8 @@ Run `npm audit` regularly to check for vulnerable dependencies.
       "mode": "FM",
       "channels": 55,
       "notable_frequencies": [
-        {"freq": 156.8, "label": "Channel 16 (Emergency)"},
-        {"freq": 157.1, "label": "Channel 22A (Coast Guard)"}
+        { "freq": 156.8, "label": "Channel 16 (Emergency)" },
+        { "freq": 157.1, "label": "Channel 22A (Coast Guard)" }
       ]
     },
     {
@@ -2191,7 +2275,7 @@ Run `npm audit` regularly to check for vulnerable dependencies.
       "end_mhz": 162.55,
       "mode": "FM",
       "channels": 7,
-      "frequencies": [162.400, 162.425, 162.450, 162.475, 162.500, 162.525, 162.550]
+      "frequencies": [162.4, 162.425, 162.45, 162.475, 162.5, 162.525, 162.55]
     },
     {
       "name": "ham_70cm",
@@ -2199,9 +2283,7 @@ Run `npm audit` regularly to check for vulnerable dependencies.
       "start_mhz": 420.0,
       "end_mhz": 450.0,
       "mode": "FM/SSB/Digital",
-      "notable_frequencies": [
-        {"freq": 446.0, "label": "National Simplex Calling"}
-      ]
+      "notable_frequencies": [{ "freq": 446.0, "label": "National Simplex Calling" }]
     },
     {
       "name": "frs_gmrs",
@@ -2223,6 +2305,7 @@ Run `npm audit` regularly to check for vulnerable dependencies.
 See `setup.sh` in separate file (next deliverable).
 
 Key steps:
+
 1. Update apt repositories
 2. Install system dependencies
 3. Install Node.js (via NodeSource)
@@ -2238,26 +2321,31 @@ Key steps:
 ### Common Issues
 
 **DUMP1090 Not Connecting:**
+
 - Check if service is running: `sudo systemctl status dump1090-mutability`
 - Check port: `nc -zv 127.0.0.1 30003 (SBS text feed)`
 - View logs: `sudo journalctl -u dump1090-mutability -f`
 
 **Kismet Not Detecting Remote ID:**
+
 - Verify Bluetooth is enabled: `bluetoothctl power on`
 - Check Kismet data source: `kismet -c hci0`
 - Ensure Kismet version is 2022+: `kismet --version`
 
 **RTL-SDR Not Detected:**
+
 - Check USB connection: `lsusb | grep RTL`
 - Test with rtl_test: `rtl_test -t`
 - Verify driver: `SoapySDRUtil --find="driver=rtlsdr"`
 
 **GPS No Fix:**
+
 - Check device: `ls /dev/ttyUSB*` or `ls /dev/ttyACM*`
 - Test gpsd: `gpspipe -w -n 5`
 - Verify outdoor line-of-sight to sky
 
 **WebSocket Connection Failed:**
+
 - Check backend is running: `curl http://localhost:3000/health`
 - Check port not in use: `lsof -i :3001`
 - Check firewall: `sudo ufw status`
@@ -2268,30 +2356,33 @@ Key steps:
 
 ### Target Benchmarks (MVP)
 
-| Metric | Target | Test Scenario |
-|--------|--------|---------------|
-| App Startup | <10s | Cold start on Core i5-6200U |
-| Map Update Latency | <2s | Aircraft detection to map display |
-| Waterfall Frame Rate | 10 Hz | 2048-point FFT, Airband |
-| CPU Usage (Idle) | <10% | Services running, no scan |
-| CPU Usage (Scanning) | <50% | Active waterfall + aircraft tracking |
-| RAM Usage | <650 MB | All components active |
-| Aircraft Capacity | 100+ | Without frame drops |
-| Drone Capacity | 20+ | Simultaneous Remote ID beacons |
+| Metric               | Target  | Test Scenario                        |
+| -------------------- | ------- | ------------------------------------ |
+| App Startup          | <10s    | Cold start on Core i5-6200U          |
+| Map Update Latency   | <2s     | Aircraft detection to map display    |
+| Waterfall Frame Rate | 10 Hz   | 2048-point FFT, Airband              |
+| CPU Usage (Idle)     | <10%    | Services running, no scan            |
+| CPU Usage (Scanning) | <50%    | Active waterfall + aircraft tracking |
+| RAM Usage            | <650 MB | All components active                |
+| Aircraft Capacity    | 100+    | Without frame drops                  |
+| Drone Capacity       | 20+     | Simultaneous Remote ID beacons       |
 
 ### Profiling Tools
 
 **Backend:**
+
 ```bash
 node --inspect backend/server.js
 # Open chrome://inspect in Chrome
 ```
 
 **Frontend:**
+
 - React DevTools (Profiler tab)
 - Chrome DevTools (Performance tab)
 
 **Database:**
+
 ```javascript
 db.pragma('query_only = ON');
 db.pragma('temp_store = MEMORY');
@@ -2301,18 +2392,16 @@ db.pragma('temp_store = MEMORY');
 
 ## Document Revision History
 
-| Version | Date | Author | Changes |
-|---------|------|--------|---------|
-| 1.0 | 2025-10-15 | Original | Initial TRD with Python/Flutter stack |
-| 2.0 | 2025-10-16 | Revised | Complete rewrite: Electron/Node.js/React stack, detailed API specs, component implementations, SoapySDR (Deferred to vNext)/rtl_tcp integration, Kismet Remote ID parsing |
+| Version | Date       | Author   | Changes                                                                                                                                                                   |
+| ------- | ---------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.0     | 2025-10-15 | Original | Initial TRD with Python/Flutter stack                                                                                                                                     |
+| 2.0     | 2025-10-16 | Revised  | Complete rewrite: Electron/Node.js/React stack, detailed API specs, component implementations, SoapySDR (Deferred to vNext)/rtl_tcp integration, Kismet Remote ID parsing |
 
 ---
 
 **END OF TRD v2.0**
 
-
 **MVP Choice:** Standardize on `rtl_tcp:1234` for SDR transport. SoapySDR integration is deferred to vNext.
-
 
 ### Remote ID Implementation Notes
 
@@ -2321,13 +2410,11 @@ db.pragma('temp_store = MEMORY');
 - **Operator location:** Treat pilot/operator location as optional; display with a dotted icon and “if available” tooltip with “last seen” age.
 - **Standards:** Target ASTM **F3411-22a**. Support Basic ID, Location/Vector, System, Operator ID, and Authentication (display-only if present).
 
-
 ### FFT & Waterfall Performance
 
 - Move FFT to a **Web Worker** and post back `Float32Array` magnitudes; avoid JSON overhead.
 - Default `fftSize` **1024** at **5 Hz** on low-end hardware; make rate/size configurable.
 - Keep telemetry (aircraft/drone lists) at 1 Hz on a separate channel.
-
 
 ### Security Hardening
 
@@ -2335,13 +2422,11 @@ db.pragma('temp_store = MEMORY');
 - Electron windows: `nodeIntegration: false`, `contextIsolation: true`.
 - Add a Content Security Policy: `default-src 'self'; img-src 'self' blob:; connect-src 'self' http://127.0.0.1:*; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'`.
 
-
 ### Health Checks (Reality-based)
 
 - **dump1090:** GET `/data/aircraft.json` and parse JSON.
 - **Kismet:** GET `/system/status.json`; treat 404/feature-missing as “unavailable” and degrade gracefully.
 - **SDR:** Connect to `rtl_tcp:1234` and read banner within timeout.
-
 
 ### Dependency Matrix & Degradation
 
@@ -2350,21 +2435,17 @@ db.pragma('temp_store = MEMORY');
 - **Localize-only:** GPS + RID; no SDR spectrum.
 - **Offline demo:** mock feeds (files) for training/tests.
 
-
 ### Memory Budget
 
 Target ~**1 GB** for Electron + MapLibre + FFT. Add a “Performance mode” that caps markers, waterfall rows, and tile density.
-
 
 ### Robust WebSockets
 
 Implement exponential backoff reconnection with jitter for UI ↔ backend sockets.
 
-
 ### Cleanup on Exit
 
 Add `before-quit` hooks to stop scans, close sockets, and purge temporary DB tables if “cleared on exit” is promised. Handle abnormal exits (`SIGTERM`, `uncaughtException`).
-
 
 ### Band Plan Caveats
 
@@ -2372,91 +2453,83 @@ Add `before-quit` hooks to stop scans, close sockets, and purge temporary DB tab
 - Sensitivity below ~50 MHz is reduced; CB (27 MHz) may require upconverter or v4-class dongle for best results.
 - Strong-signal environments may need front-end filtering/attenuation.
 
-
 ## Input Validation & Resource Limits
 
 **Input Validation**  
 All external data must be validated before use:
+
 - ICAO hex: `/^[a-f0-9]{6}$/i`
 - Latitude ∈ [-90, 90], Longitude ∈ [-180, 180]
 - Clamp altitude/speed/headings to sane bounds
 - Reject/ignore malformed objects
 
 **Resource Limits (defaults; configurable):**
+
 - MAX_AIRCRAFT = 500
 - MAX_DRONES = 100
 - MAX_SIGNALS = 1000
 - WATERFALL_ROWS = 100
 
-
-
 ## DUMP1090 Interface (HTTP JSON)
 
-**DUMP1090 Interface (HTTP JSON)**  
-- Standardize on polling `http://127.0.0.1:8080/data/aircraft.json` at **1 Hz**.  
-- Port **30003** is **SBS text** (optional; requires a line parser).  
+**DUMP1090 Interface (HTTP JSON)**
+
+- Standardize on polling `http://127.0.0.1:8080/data/aircraft.json` at **1 Hz**.
+- Port **30003** is **SBS text** (optional; requires a line parser).
 - Health Check: GET `/data/aircraft.json` → 200 + JSON parse.
-
-
 
 ## FFT & Waterfall Performance and Memory
 
-**FFT & Waterfall Performance and Memory**  
-- Compute FFT in a **Web Worker**; pass `Float32Array` magnitudes (no JSON).  
-- Default `fftSize` **1024** and **5 Hz** on low-end hardware; **target ≥10 Hz** on capable systems (user-tunable).  
-- Use a **fixed-size circular buffer** for waterfall rows to cap memory (e.g., 100 rows).  
+**FFT & Waterfall Performance and Memory**
 
-
+- Compute FFT in a **Web Worker**; pass `Float32Array` magnitudes (no JSON).
+- Default `fftSize` **1024** and **5 Hz** on low-end hardware; **target ≥10 Hz** on capable systems (user-tunable).
+- Use a **fixed-size circular buffer** for waterfall rows to cap memory (e.g., 100 rows).
 
 ## GPS Manual Fallback
 
-**GPS Manual Fallback**  
+**GPS Manual Fallback**
+
 - If gpsd has no fix (indoors), allow a **manual position** (lat, lon) used until a real fix arrives.
-
-
 
 ## Progressive Loading & Friendly Error Recovery
 
-**Progressive Loading & Friendly Error Recovery**  
-- Show map immediately with cached tiles; then connect services; then start data streams.  
-- Present human-readable error panels with suggested actions (e.g., “Start dump1090 service”).  
+**Progressive Loading & Friendly Error Recovery**
+
+- Show map immediately with cached tiles; then connect services; then start data streams.
+- Present human-readable error panels with suggested actions (e.g., “Start dump1090 service”).
 - Provide action buttons (Retry, Start Service, Open Troubleshooting) where feasible.
-
-
 
 ## Resilient WebSockets
 
-**Resilient WebSockets**  
-- Implement exponential backoff + jitter for reconnects; reset delay on successful open.  
+**Resilient WebSockets**
 
-
+- Implement exponential backoff + jitter for reconnects; reset delay on successful open.
 
 ## Database Batching Policy
 
-**Database Batching Policy**  
-- Batch inserts (e.g., groups of 100) using a transaction wrapper; flush every 5s or at limit.  
+**Database Batching Policy**
 
-
+- Batch inserts (e.g., groups of 100) using a transaction wrapper; flush every 5s or at limit.
 
 ## Mock Mode (No Hardware Development)
 
-**Mock Mode (No Hardware Development)**  
-- `USE_MOCK_DATA=true` to enable mock generators for aircraft, drones, signals, and GPS.  
-- Provide `npm` scripts for doctor/perf tests (`test:services`, `test:mock`, `test:perf`, `doctor`).  
+**Mock Mode (No Hardware Development)**
 
-
+- `USE_MOCK_DATA=true` to enable mock generators for aircraft, drones, signals, and GPS.
+- Provide `npm` scripts for doctor/perf tests (`test:services`, `test:mock`, `test:perf`, `doctor`).
 
 ## Testing Checklist (Minimum Coverage)
 
-**Testing Checklist (Minimum Coverage)**  
-- No hardware connected (mock only)  
-- RTL-SDR only  
-- RTL-SDR + GPS  
-- Indoors (no GPS fix)  
-- 100+ aircraft load  
-- 1+ hour soak (memory leaks)  
-- Malformed DUMP1090 data  
-- Service crash & recovery  
-- Export with large dataset  
-- Minimum-spec hardware
+**Testing Checklist (Minimum Coverage)**
 
+- No hardware connected (mock only)
+- RTL-SDR only
+- RTL-SDR + GPS
+- Indoors (no GPS fix)
+- 100+ aircraft load
+- 1+ hour soak (memory leaks)
+- Malformed DUMP1090 data
+- Service crash & recovery
+- Export with large dataset
+- Minimum-spec hardware

@@ -5,7 +5,8 @@ export const useAppVersion = (): string => {
 
   useEffect(() => {
     const api = (window as unknown as { onthego?: { getVersion?: () => Promise<string> } }).onthego;
-    api?.getVersion?.()
+    api
+      ?.getVersion?.()
       .then((value) => {
         if (value) {
           setVersion(value);

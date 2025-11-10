@@ -2,12 +2,7 @@ const EARTH_RADIUS_KM = 6_371;
 
 const toRadians = (degrees: number): number => (degrees * Math.PI) / 180;
 
-export function haversineDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number,
-): number {
+export function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const dLat = toRadians(lat2 - lat1);
   const dLon = toRadians(lon2 - lon1);
 

@@ -1,10 +1,12 @@
 # PRODUCT REQUIREMENTS DOCUMENT (PRD)
+
 ## On-the-Go RF Awareness Scanner
+
 ### Version 1.0 MVP - Linux (Ubuntu/Debian)
 
 **Document Version:** 2.0  
 **Last Updated:** October 16, 2025  
-**Status:** Final for Development  
+**Status:** Final for Development
 
 ---
 
@@ -23,8 +25,9 @@ The On-the-Go RF Awareness Scanner is a field-deployable desktop application tha
 Create a unified RF awareness platform that makes professional-grade spectrum monitoring accessible to everyday users without requiring deep technical knowledge of radio, electronics, or SDR configuration.
 
 ### Guiding Principles
+
 1. **Plug-and-Play:** Users plug in hardware, select data sources, and hit "Scan"
-2. **Visual First:** Map-based interface shows *where* things are, not just *what* they are
+2. **Visual First:** Map-based interface shows _where_ things are, not just _what_ they are
 3. **Progressive Disclosure:** Simple by default, advanced features accessible but not required
 4. **Privacy-Conscious:** Session-only data storage, user controls exports
 5. **Legal Compliance:** Passive monitoring only, respects FCC regulations
@@ -36,17 +39,20 @@ Create a unified RF awareness platform that makes professional-grade spectrum mo
 ### Primary Persona: "Curious Citizen Chris"
 
 **Demographics:**
+
 - Age: 25-55
 - Technical proficiency: Basic (can install software, use smartphone apps)
 - Not a radio hobbyist, electrical engineer, or IT professional
 
 **Motivations:**
+
 - Wants general situational awareness of RF activity in their area
 - Interested in tracking aircraft overhead
 - Concerned about drone activity near property
 - Curious about radio communications but intimidated by complex SDR software
 
 **Pain Points:**
+
 - Existing SDR software (GQRX, SDR#, CubicSDR) requires deep technical knowledge
 - Too many separate tools (DUMP1090 for aircraft, Kismet for WiFi, different apps for scanning)
 - Configuration files, command-line interfaces, frequency tables
@@ -58,16 +64,19 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 ### Secondary Persona: "Emergency Responder Emma"
 
 **Demographics:**
+
 - Age: 30-50
 - Role: Volunteer SAR, Community Emergency Response Team (CERT), Amateur Radio operator
 - Technical proficiency: Moderate
 
 **Motivations:**
+
 - Needs quick RF situational awareness during emergency deployments
 - Wants to monitor multiple bands simultaneously
 - Requires reliable operation in field conditions (vehicle-based)
 
 **Pain Points:**
+
 - Current tools require laptop + multiple programs + internet connection
 - Setup time is too long when responding to incidents
 - Needs offline operation (no cell service in remote areas)
@@ -79,11 +88,13 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 ### Epic 1: Initial Setup & Device Detection
 
 #### US-1.1: Easy Installation
+
 **As a** new user  
 **I want to** install the application with minimal technical steps  
 **So that** I can start using it quickly without troubleshooting
 
 **Acceptance Criteria:**
+
 - User runs `setup.sh` with sudo, script installs all dependencies
 - Script installs: DUMP1090, Kismet, SoapySDR (Deferred to vNext), gpsd, required drivers
 - Script provides clear success/failure messages
@@ -91,11 +102,13 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 - Installation completes in <5 minutes on typical system
 
 #### US-1.2: Automatic Hardware Detection
+
 **As a** user  
 **I want** my SDR and GPS hardware to be automatically detected  
 **So that** I don't have to configure device paths or settings manually
 
 **Acceptance Criteria:**
+
 - App detects RTL-SDR devices on launch
 - App detects HackRF devices on launch
 - App detects GPS dongle via gpsd
@@ -110,11 +123,13 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 **Note:** Use dump1090 HTTP JSON at `/data/aircraft.json` (default port 8080). Port 30003 is the SBS text feed and requires a line parser.)
 
 #### US-2.1: View Aircraft on Map
+
 **As a** user  
 **I want to** see aircraft in my area displayed on a map  
 **So that** I can understand air traffic around me
 
 **Acceptance Criteria:**
+
 - Map displays all aircraft detected by DUMP1090
 - Each aircraft shown as icon with callsign label
 - Clicking aircraft icon shows details: altitude, speed, heading
@@ -124,11 +139,13 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 - User can pan/zoom map freely
 
 #### US-2.2: Aircraft List View
+
 **As a** user  
 **I want to** see a list of detected aircraft with key details  
 **So that** I can quickly scan multiple aircraft without clicking map icons
 
 **Acceptance Criteria:**
+
 - Sidebar or panel shows list of all active aircraft
 - List includes: callsign, altitude, speed, distance from user
 - List sorted by distance (closest first) by default
@@ -141,11 +158,13 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 ### Epic 3: Drone Detection (Remote ID)
 
 #### US-3.1: Detect Drones via Remote ID
+
 **As a** user  
 **I want to** see drones broadcasting Remote ID in my area  
 **So that** I'm aware of drone operations nearby
 
 **Acceptance Criteria:**
+
 - Kismet configured to monitor Bluetooth for Remote ID broadcasts
 - App filters Kismet output for Remote ID packets only
 - Drone appears on map within 2 seconds of detection
@@ -153,11 +172,13 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 - Drone label shows: manufacturer, model (if available)
 
 #### US-3.2: Display Drone Operator Location
+
 **As a** user  
 **I want to** see where the drone operator is located  
 **So that** I understand who is flying the drone
 
 **Acceptance Criteria:**
+
 - Operator location extracted from Remote ID payload
 - Operator shown on map as separate icon
 - Line drawn between drone and operator on map
@@ -165,11 +186,13 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 - If operator location unavailable, show "Operator: Unknown"
 
 #### US-3.3: Drone Details Panel
+
 **As a** user  
 **I want to** click a drone icon to see detailed information  
 **So that** I can understand the drone's flight profile
 
 **Acceptance Criteria:**
+
 - Click drone icon opens detail panel
 - Panel shows: drone ID, manufacturer, model, altitude, speed, heading
 - Panel shows: operator location (if available)
@@ -181,11 +204,13 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 ### Epic 4: RF Spectrum Scanning
 
 #### US-4.1: Select Band to Scan
+
 **As a** user  
 **I want to** choose which frequency band to monitor  
 **So that** I can focus on communications I'm interested in
 
 **Acceptance Criteria:**
+
 - Dropdown menu lists available bands:
   - Airband (108-137 MHz)
   - Marine VHF (156-162 MHz)
@@ -199,11 +224,13 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 - Tooltip explains what each band is used for
 
 #### US-4.2: Waterfall Visualization
+
 **As a** user  
 **I want to** see a waterfall display of the selected frequency band  
 **So that** I can visually identify active signals
 
 **Acceptance Criteria:**
+
 - Waterfall display collapsed by default (hidden)
 - "Start Scan" button begins spectrum scanning
 - Waterfall updates at 10 Hz
@@ -214,11 +241,13 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 - Waterfall view can be collapsed to save screen space
 
 #### US-4.3: Signal Detection & Logging
+
 **As a** user  
 **I want** strong signals to be automatically detected and logged  
 **So that** I can review active communications later
 
 **Acceptance Criteria:**
+
 - Signals above threshold (-40 dBm or configurable) are logged to SQLite
 - Dashboard shows count of active signals
 - Signal list view shows: frequency, signal strength, band name, time detected
@@ -230,11 +259,13 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 ### Epic 5: Dashboard & Statistics
 
 #### US-5.1: Real-Time Statistics Panel
+
 **As a** user  
 **I want to** see summary statistics of detected RF activity  
 **So that** I can quickly assess the current RF environment
 
 **Acceptance Criteria:**
+
 - Dashboard panel shows three sections:
   - **Aircraft Detected:** Total count, breakdown by type (commercial/private if detectable)
   - **Drones Detected:** Total count, breakdown by manufacturer (DJI, Autel, etc.)
@@ -249,22 +280,26 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 ### Epic 6: Data Management
 
 #### US-6.1: Session-Only Data Storage
+
 **As a** user  
 **I want** data to be automatically deleted when I close the app  
 **So that** I'm not storing RF logs indefinitely without my knowledge
 
 **Acceptance Criteria:**
+
 - SQLite database cleared on application exit
 - User sees confirmation: "Data will be cleared on exit. Export now?"
 - If user cancels exit, app remains open and data retained
 - No persistent storage of RF signals, aircraft, or drones across sessions
 
 #### US-6.2: Export Data Before Exit
+
 **As a** user  
 **I want to** export my session data before closing the app  
 **So that** I can keep records of interesting RF activity
 
 **Acceptance Criteria:**
+
 - "Export Data" button in dashboard
 - Export creates three CSV files:
   - `aircraft_YYYYMMDD_HHMMSS.csv`
@@ -280,11 +315,13 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 ### Epic 7: GPS & Location
 
 #### US-7.1: GPS Location Display
+
 **As a** user  
 **I want** my current location displayed on the map  
 **So that** I can orient myself and understand distances to detected objects
 
 **Acceptance Criteria:**
+
 - User location shown as distinct icon (e.g., blue dot)
 - Location updates from GPS dongle via gpsd
 - Update rate: 1 Hz (once per second)
@@ -292,11 +329,13 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 - User location icon always visible (does not pan out of view)
 
 #### US-7.2: Distance Calculations
+
 **As a** user  
 **I want** distances from my location to aircraft/drones displayed  
 **So that** I can judge proximity without mental math
 
 **Acceptance Criteria:**
+
 - Aircraft/drone detail panels show distance in miles or kilometers
 - User can toggle distance unit in settings
 - Distance calculated using great-circle formula
@@ -308,24 +347,30 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 ## MVP Feature Set (In Scope for v1.0)
 
 ### Core Features
+
 ✅ **SDR Support:**
+
 - RTL-SDR (all versions)
 - HackRF One
 - Unified interface via SoapySDR (Deferred to vNext)
 
 ✅ **Data Sources:**
+
 - ADS-B
 
 **Note:** Use dump1090 HTTP JSON at `/data/aircraft.json` (default port 8080). Port 30003 is the SBS text feed and requires a line parser. aircraft tracking (via DUMP1090)
+
 - Drone Remote ID detection (via Kismet Bluetooth)
 - RF spectrum scanning (via SoapySDR (Deferred to vNext))
 
 ✅ **Visualization:**
+
 - Map view with aircraft, drones, user location (MapLibre GL JS)
 - Waterfall spectrum display (10 Hz update rate)
 - Real-time dashboard statistics
 
 ✅ **Bands (Hardcoded):**
+
 - Airband (108-137 MHz)
 - Marine VHF (156-162 MHz)
 - NOAA Weather (162.4-162.55 MHz)
@@ -335,15 +380,18 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 - Ham 70cm (420-450 MHz)
 
 ✅ **Data Management:**
+
 - Session-only SQLite storage
 - CSV export before exit
 - No persistent logs
 
 ✅ **Hardware:**
+
 - USB GPS dongle support (DeLorme 9838, Arduino GPS modules)
 - Laptop integrated Bluetooth for Remote ID
 
 ✅ **Platform:**
+
 - Ubuntu 20.04+
 - Debian 11+
 
@@ -352,11 +400,13 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 ## Out of Scope (v1.5 and v2.0)
 
 ### v1.5 Features (Windows Port)
+
 ❌ Windows .exe installer with bundled dependencies  
 ❌ Windows-specific driver handling  
-❌ Cross-platform build automation  
+❌ Cross-platform build automation
 
 ### v2.0 Features
+
 ❌ Alert system (proximity alerts, emergency frequency alerts, audio notifications)  
 ❌ Custom CSV frequency import  
 ❌ RadioReference integration  
@@ -372,13 +422,14 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 ❌ Integration with external feeds (Kraken, ADS-B
 
 **Note:** Use dump1090 HTTP JSON at `/data/aircraft.json` (default port 8080). Port 30003 is the SBS text feed and requires a line parser. Exchange)  
-❌ Mobile app (Android/iOS)  
+❌ Mobile app (Android/iOS)
 
 ---
 
 ## Non-Functional Requirements
 
 ### Performance
+
 - **Map Update Latency:** <2 seconds from detection to display
 - **Waterfall Frame Rate:** 10 Hz minimum
 - **CPU Usage:** <50% on Intel Core i5-6200U (2015 laptop) during active scanning
@@ -387,21 +438,25 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 - **GPS Update Rate:** 1 Hz
 
 ### Reliability
+
 - **Crash Recovery:** App gracefully handles disconnected USB devices
 - **Data Integrity:** No corrupted SQLite writes on abnormal exit
 - **Service Dependencies:** App displays clear status if DUMP1090/Kismet not running
 
 ### Usability
+
 - **First-Time Setup:** User completes setup in <10 minutes following README
 - **Learning Curve:** User successfully detects aircraft within 5 minutes of first launch
 - **Error Messages:** All errors include actionable troubleshooting steps
 
 ### Security & Privacy
+
 - **No Remote Telemetry:** App does not phone home or send usage data
 - **Local Storage Only:** All data stored on user's device
 - **No Authentication:** No accounts, logins, or cloud services required
 
 ### Compatibility
+
 - **Linux Kernel:** 5.4+ (Ubuntu 20.04, Debian 11 minimum)
 - **Bluetooth:** Bluetooth 4.0+ required for Remote ID
 - **USB Ports:** Minimum 2 USB ports (SDR + GPS)
@@ -412,22 +467,26 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 ## Success Metrics
 
 ### Adoption Metrics
+
 - **Primary:** 100 active users within 3 months of v1.0 release
 - **Secondary:** 10 community contributions (bug reports, feature requests) on GitHub
 
 ### Usage Metrics
+
 - **Session Duration:** Average >15 minutes per session (indicates engagement)
 - **Feature Usage:** >70% of users activate waterfall view at least once
 - **Export Frequency:** >30% of users export data before exit (indicates value)
 
 ### Quality Metrics
+
 - **Crash Rate:** <5% of sessions end in crash
 - **Setup Success Rate:** >90% of users complete setup.sh without errors
-- **Detection Accuracy:** 
+- **Detection Accuracy:**
   - Aircraft detection matches DUMP1090 raw output 100%
   - Drone Remote ID parsing matches Kismet output 100%
 
 ### User Satisfaction
+
 - **Post-Use Survey:** >70% rate ease-of-use as "Good" or "Excellent"
 - **NPS Score:** >40 (Net Promoter Score)
 
@@ -518,6 +577,7 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 ## Technical Constraints & Assumptions
 
 ### Assumptions
+
 1. User has sudo/root access for setup.sh installation
 2. User's laptop has at least 2 available USB ports
 3. Internet connection available during initial setup (for apt packages)
@@ -527,6 +587,7 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 7. GPS dongle provides NMEA-formatted output via gpsd
 
 ### Constraints
+
 1. **Legal:** Passive monitoring only, no transmission capabilities
 2. **Hardware:** Limited to USB-connected SDRs (no networked SDRs in MVP)
 3. **Platform:** X11-based Linux desktop environments (no Wayland in MVP)
@@ -538,26 +599,28 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 
 ## Risks & Mitigation
 
-| Risk | Impact | Probability | Mitigation |
-|------|--------|-------------|------------|
-| Kismet Remote ID support incomplete | High | Medium | Test early with real DJI drone. Fallback: custom BT parser using opendroneid-core-c library |
-| RTL-SDR driver conflicts with other software | Medium | Medium | Document known conflicts (SDR++, GQRX). Provide instructions to stop other SDR apps. |
-| GPS dongle not detected by gpsd | Medium | Low | Provide troubleshooting guide. Support multiple GPS models. |
-| Map tiles require internet connection | Low | High | Bundle offline map tiles in v1.5. For MVP, document internet requirement. |
-| HackRF sensitivity lower than RTL-SDR | Low | Medium | Set user expectations. Recommend RTL-SDR for airband/marine, HackRF for wideband. |
-| SoapySDR (Deferred to vNext) device selection confusing for users | Medium | Low | Auto-select first available device. Show friendly device names in picker. |
-| Session-only storage causes data loss | Low | Low | Clear warning on exit. Export button prominently placed. |
+| Risk                                                              | Impact | Probability | Mitigation                                                                                  |
+| ----------------------------------------------------------------- | ------ | ----------- | ------------------------------------------------------------------------------------------- |
+| Kismet Remote ID support incomplete                               | High   | Medium      | Test early with real DJI drone. Fallback: custom BT parser using opendroneid-core-c library |
+| RTL-SDR driver conflicts with other software                      | Medium | Medium      | Document known conflicts (SDR++, GQRX). Provide instructions to stop other SDR apps.        |
+| GPS dongle not detected by gpsd                                   | Medium | Low         | Provide troubleshooting guide. Support multiple GPS models.                                 |
+| Map tiles require internet connection                             | Low    | High        | Bundle offline map tiles in v1.5. For MVP, document internet requirement.                   |
+| HackRF sensitivity lower than RTL-SDR                             | Low    | Medium      | Set user expectations. Recommend RTL-SDR for airband/marine, HackRF for wideband.           |
+| SoapySDR (Deferred to vNext) device selection confusing for users | Medium | Low         | Auto-select first available device. Show friendly device names in picker.                   |
+| Session-only storage causes data loss                             | Low    | Low         | Clear warning on exit. Export button prominently placed.                                    |
 
 ---
 
 ## Dependencies & Integrations
 
 ### External Services (User-Installed)
+
 - **DUMP1090:** ADS-B
 
 **Note:** Use dump1090 HTTP JSON at `/data/aircraft.json` (default port 8080). Port 30003 is the SBS text feed and requires a line parser. decoder for aircraft tracking
-  - Interface: JSON stream on localhost:30003 (SBS text feed)
-  - Version: dump1090-mutability or dump1090-fa
+
+- Interface: JSON stream on localhost:30003 (SBS text feed)
+- Version: dump1090-mutability or dump1090-fa
 - **Kismet:** Wireless monitoring for drone Remote ID
   - Interface: REST API on localhost:2501
   - Version: 2022+ (with Remote ID support)
@@ -569,6 +632,7 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
   - Version: 0.8+
 
 ### Libraries & Frameworks
+
 - **Electron:** Desktop application framework (v28+)
 - **Node.js:** JavaScript runtime (v18 LTS)
 - **MapLibre GL JS:** Map rendering (v3+)
@@ -581,6 +645,7 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 ## Appendix A: Band Plan Details
 
 ### Airband (108-137 MHz)
+
 - **Use:** Commercial and private aircraft communications
 - **Mode:** AM (Amplitude Modulation)
 - **Channels:** 760 channels, 25 kHz spacing
@@ -590,6 +655,7 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
   - 118.0-136.975 MHz: Air Traffic Control
 
 ### Marine VHF (156-162 MHz)
+
 - **Use:** Maritime communications, Coast Guard
 - **Mode:** FM (Frequency Modulation)
 - **Channels:** 55+ channels, 25 kHz spacing
@@ -598,6 +664,7 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
   - 157.1 MHz: Channel 22A (Coast Guard)
 
 ### NOAA Weather (162.4-162.55 MHz)
+
 - **Use:** Continuous weather broadcasts, emergency alerts
 - **Mode:** FM
 - **Channels:** 7 channels
@@ -605,22 +672,26 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
   - 162.400, 162.425, 162.450, 162.475, 162.500, 162.525, 162.550 MHz
 
 ### FRS/GMRS (462-467 MHz)
+
 - **Use:** Family Radio Service, General Mobile Radio Service (walkie-talkies)
 - **Mode:** FM (narrowband, 12.5 kHz)
 - **Channels:** 22 FRS channels, 30 GMRS channels (overlap)
 
 ### CB (Citizens Band) (26.965-27.405 MHz)
+
 - **Use:** Short-range personal/business communications
 - **Mode:** AM or SSB (Single Sideband)
 - **Channels:** 40 channels, 10 kHz spacing
 - **Notable:** Channel 9 (emergency), Channel 19 (truckers)
 
 ### Ham 2m (144-148 MHz)
+
 - **Use:** Amateur radio VHF band
 - **Mode:** FM, SSB, CW (Morse)
 - **Notable:** 146.52 MHz (national simplex calling frequency)
 
 ### Ham 70cm (420-450 MHz)
+
 - **Use:** Amateur radio UHF band
 - **Mode:** FM, SSB, digital modes
 - **Notable:** 446.0 MHz (national simplex calling frequency)
@@ -630,6 +701,7 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 ## Appendix B: Hardware Requirements
 
 ### Minimum System Requirements
+
 - **OS:** Ubuntu 20.04 LTS or Debian 11
 - **CPU:** Intel Core i3-6100U (2015) or equivalent
 - **RAM:** 4 GB
@@ -639,6 +711,7 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 - **Display:** 1280x720 resolution
 
 ### Recommended System Requirements
+
 - **OS:** Ubuntu 22.04 LTS
 - **CPU:** Intel Core i5-8250U (2017) or equivalent
 - **RAM:** 8 GB
@@ -648,6 +721,7 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 - **Display:** 1920x1080 resolution
 
 ### Supported SDR Hardware
+
 - **RTL-SDR Blog v3** ($35)
   - Frequency range: 24-1766 MHz
   - Sample rate: 2.4 MS/s
@@ -663,6 +737,7 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
   - Recommended for: Wideband scanning, future features
 
 ### Supported GPS Hardware
+
 - **DeLorme Model 9838** (SiRF Star III chipset)
 - **Adafruit Ultimate GPS** (MTK3339 chipset)
 - **u-blox NEO-6M** (Arduino-compatible modules)
@@ -673,6 +748,7 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 ## Appendix C: Installation Guide (User-Facing)
 
 ### Prerequisites
+
 - Ubuntu 20.04+ or Debian 11+
 - Sudo/root access
 - Internet connection
@@ -682,12 +758,14 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
 ### Installation Steps
 
 1. **Download the Application**
+
    ```bash
    git clone https://github.com/yourorg/onthego-scanner.git
    cd onthego-scanner
    ```
 
 2. **Run Setup Script (as root)**
+
    ```bash
    sudo ./setup.sh
    ```
@@ -696,18 +774,22 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
    - DUMP1090 (ADS-B
 
 **Note:** Use dump1090 HTTP JSON at `/data/aircraft.json` (default port 8080). Port 30003 is the SBS text feed and requires a line parser. decoder)
-   - Kismet (wireless monitoring)
-   - SoapySDR (Deferred to vNext) + modules (RTL-SDR, HackRF)
-   - gpsd (GPS daemon)
-   - Node.js dependencies
+
+- Kismet (wireless monitoring)
+- SoapySDR (Deferred to vNext) + modules (RTL-SDR, HackRF)
+- gpsd (GPS daemon)
+- Node.js dependencies
 
 3. **Add User to Groups**
+
    ```bash
    sudo usermod -aG kismet plugdev dialout $USER
    ```
+
    **Log out and log back in** for group changes to take effect.
 
 4. **Start Services**
+
    ```bash
    sudo systemctl start dump1090
    sudo systemctl start kismet
@@ -715,6 +797,7 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
    ```
 
 5. **Launch Application**
+
    ```bash
    npm start
    ```
@@ -724,6 +807,7 @@ Chris buys an RTL-SDR dongle online. They install the On-the-Go Scanner, plug in
    - If any ❌ shown, see Troubleshooting section in README
 
 ### Optional: Enable Services on Boot
+
 ```bash
 sudo systemctl enable dump1090
 sudo systemctl enable kismet
@@ -735,6 +819,7 @@ sudo systemctl enable gpsd
 ## Appendix D: Data Schema (SQLite)
 
 ### Table: aircraft
+
 ```sql
 CREATE TABLE aircraft (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -754,6 +839,7 @@ CREATE TABLE aircraft (
 ```
 
 ### Table: drones
+
 ```sql
 CREATE TABLE drones (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -777,6 +863,7 @@ CREATE TABLE drones (
 ```
 
 ### Table: rf_signals
+
 ```sql
 CREATE TABLE rf_signals (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -795,6 +882,7 @@ CREATE TABLE rf_signals (
 ```
 
 ### Table: user_settings (persistent across sessions)
+
 ```sql
 CREATE TABLE user_settings (
     key TEXT PRIMARY KEY,
@@ -817,6 +905,7 @@ CREATE TABLE user_settings (
 ### MVP Acceptance Criteria
 
 #### Installation & Setup
+
 - [ ] User completes setup.sh without errors on Ubuntu 20.04
 - [ ] User completes setup.sh without errors on Debian 11
 - [ ] All dependencies installed: DUMP1090, Kismet, SoapySDR (Deferred to vNext), gpsd
@@ -824,6 +913,7 @@ CREATE TABLE user_settings (
 - [ ] Setup completes in <5 minutes
 
 #### Device Detection
+
 - [ ] RTL-SDR v3 detected and shown in status bar
 - [ ] HackRF One detected and shown in status bar
 - [ ] GPS dongle (DeLorme 9838) detected via gpsd
@@ -831,6 +921,7 @@ CREATE TABLE user_settings (
 - [ ] Clear error messages if devices not found
 
 #### Aircraft Monitoring
+
 - [ ] Aircraft from DUMP1090 displayed on map within 2 seconds
 - [ ] Aircraft icons show callsign labels
 - [ ] Clicking aircraft icon shows detail panel (altitude, speed, heading)
@@ -838,6 +929,7 @@ CREATE TABLE user_settings (
 - [ ] Aircraft list view shows all active aircraft sorted by distance
 
 #### Drone Detection
+
 - [ ] DJI drones broadcasting Remote ID appear on map within 2 seconds
 - [ ] Drone icon distinct from aircraft icon
 - [ ] Operator location extracted from Remote ID payload
@@ -845,6 +937,7 @@ CREATE TABLE user_settings (
 - [ ] Drone detail panel shows: ID, manufacturer, model, altitude, speed
 
 #### Spectrum Scanning
+
 - [ ] Band dropdown lists all 7 supported bands
 - [ ] Selecting band updates waterfall frequency range
 - [ ] "Start Scan" button begins spectrum visualization
@@ -853,6 +946,7 @@ CREATE TABLE user_settings (
 - [ ] "Stop Scan" button pauses scanning
 
 #### Dashboard
+
 - [ ] Dashboard shows aircraft count
 - [ ] Dashboard shows drone count
 - [ ] Dashboard shows RF signal count
@@ -862,6 +956,7 @@ CREATE TABLE user_settings (
 - [ ] "Export" button opens file picker
 
 #### Data Management
+
 - [ ] SQLite database created on first launch
 - [ ] Session data persists during app runtime
 - [ ] Export creates three CSV files with timestamped filenames
@@ -869,12 +964,14 @@ CREATE TABLE user_settings (
 - [ ] Database cleared on app exit (if user confirms)
 
 #### GPS & Location
+
 - [ ] User location shown as blue dot on map
 - [ ] GPS position updates at 1 Hz
 - [ ] Distance calculations shown in aircraft/drone detail panels
 - [ ] User can toggle distance unit (miles/km) in settings
 
 #### Performance
+
 - [ ] Map updates <2 seconds after detection
 - [ ] Waterfall maintains 10 Hz frame rate
 - [ ] CPU usage <50% during active scanning (Core i5-6200U)
@@ -882,6 +979,7 @@ CREATE TABLE user_settings (
 - [ ] App starts in <10 seconds
 
 #### UI/UX
+
 - [ ] Map is primary view on launch
 - [ ] Dashboard panel visible below map
 - [ ] Waterfall collapsed by default
@@ -893,25 +991,24 @@ CREATE TABLE user_settings (
 
 ## Document Revision History
 
-| Version | Date | Author | Changes |
-|---------|------|--------|---------|
-| 1.0 | 2025-10-15 | Original | Initial PRD with Python/Flutter stack |
-| 2.0 | 2025-10-16 | Revised | Complete rewrite: Electron/Node.js stack, Linux MVP, removed WiFi/BLE advertising, clarified drone Remote ID via Kismet, added detailed user stories and acceptance criteria |
+| Version | Date       | Author   | Changes                                                                                                                                                                      |
+| ------- | ---------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.0     | 2025-10-15 | Original | Initial PRD with Python/Flutter stack                                                                                                                                        |
+| 2.0     | 2025-10-16 | Revised  | Complete rewrite: Electron/Node.js stack, Linux MVP, removed WiFi/BLE advertising, clarified drone Remote ID via Kismet, added detailed user stories and acceptance criteria |
 
 ---
 
 ## Approval & Sign-Off
 
-**Product Owner:** _________________________  Date: __________
+**Product Owner:** ************\_************ Date: ****\_\_****
 
-**Technical Lead:** _________________________  Date: __________
+**Technical Lead:** ************\_************ Date: ****\_\_****
 
-**QA Lead:** _________________________  Date: __________
+**QA Lead:** ************\_************ Date: ****\_\_****
 
 ---
 
 **END OF PRD v2.0**
-
 
 ### Remote ID Implementation Notes
 
@@ -920,13 +1017,11 @@ CREATE TABLE user_settings (
 - **Operator location:** Treat pilot/operator location as optional; display with a dotted icon and “if available” tooltip with “last seen” age.
 - **Standards:** Target ASTM **F3411-22a**. Support Basic ID, Location/Vector, System, Operator ID, and Authentication (display-only if present).
 
-
 ### FFT & Waterfall Performance
 
 - Move FFT to a **Web Worker** and post back `Float32Array` magnitudes; avoid JSON overhead.
 - Default `fftSize` **1024** at **5 Hz** on low-end hardware; make rate/size configurable.
 - Keep telemetry (aircraft/drone lists) at 1 Hz on a separate channel.
-
 
 ### Security Hardening
 
@@ -934,13 +1029,11 @@ CREATE TABLE user_settings (
 - Electron windows: `nodeIntegration: false`, `contextIsolation: true`.
 - Add a Content Security Policy: `default-src 'self'; img-src 'self' blob:; connect-src 'self' http://127.0.0.1:*; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'`.
 
-
 ### Health Checks (Reality-based)
 
 - **dump1090:** GET `/data/aircraft.json` and parse JSON.
 - **Kismet:** GET `/system/status.json`; treat 404/feature-missing as “unavailable” and degrade gracefully.
 - **SDR:** Connect to `rtl_tcp:1234` and read banner within timeout.
-
 
 ### Dependency Matrix & Degradation
 
@@ -949,21 +1042,17 @@ CREATE TABLE user_settings (
 - **Localize-only:** GPS + RID; no SDR spectrum.
 - **Offline demo:** mock feeds (files) for training/tests.
 
-
 ### Memory Budget
 
 Target ~**1 GB** for Electron + MapLibre + FFT. Add a “Performance mode” that caps markers, waterfall rows, and tile density.
-
 
 ### Robust WebSockets
 
 Implement exponential backoff reconnection with jitter for UI ↔ backend sockets.
 
-
 ### Cleanup on Exit
 
 Add `before-quit` hooks to stop scans, close sockets, and purge temporary DB tables if “cleared on exit” is promised. Handle abnormal exits (`SIGTERM`, `uncaughtException`).
-
 
 ### Band Plan Caveats
 
@@ -971,103 +1060,94 @@ Add `before-quit` hooks to stop scans, close sockets, and purge temporary DB tab
 - Sensitivity below ~50 MHz is reduced; CB (27 MHz) may require upconverter or v4-class dongle for best results.
 - Strong-signal environments may need front-end filtering/attenuation.
 
-
 ## Input Validation & Resource Limits
 
 **Input Validation**  
 All external data must be validated before use:
+
 - ICAO hex: `/^[a-f0-9]{6}$/i`
 - Latitude ∈ [-90, 90], Longitude ∈ [-180, 180]
 - Clamp altitude/speed/headings to sane bounds
 - Reject/ignore malformed objects
 
 **Resource Limits (defaults; configurable):**
+
 - MAX_AIRCRAFT = 500
 - MAX_DRONES = 100
 - MAX_SIGNALS = 1000
 - WATERFALL_ROWS = 100
 
-
-
 ## DUMP1090 Interface (HTTP JSON)
 
-**DUMP1090 Interface (HTTP JSON)**  
-- Standardize on polling `http://127.0.0.1:8080/data/aircraft.json` at **1 Hz**.  
-- Port **30003** is **SBS text** (optional; requires a line parser).  
+**DUMP1090 Interface (HTTP JSON)**
+
+- Standardize on polling `http://127.0.0.1:8080/data/aircraft.json` at **1 Hz**.
+- Port **30003** is **SBS text** (optional; requires a line parser).
 - Health Check: GET `/data/aircraft.json` → 200 + JSON parse.
-
-
 
 ## FFT & Waterfall Performance and Memory
 
-**FFT & Waterfall Performance and Memory**  
-- Compute FFT in a **Web Worker**; pass `Float32Array` magnitudes (no JSON).  
-- Default `fftSize` **1024** and **5 Hz** on low-end hardware; **target ≥10 Hz** on capable systems (user-tunable).  
-- Use a **fixed-size circular buffer** for waterfall rows to cap memory (e.g., 100 rows).  
+**FFT & Waterfall Performance and Memory**
 
-
+- Compute FFT in a **Web Worker**; pass `Float32Array` magnitudes (no JSON).
+- Default `fftSize` **1024** and **5 Hz** on low-end hardware; **target ≥10 Hz** on capable systems (user-tunable).
+- Use a **fixed-size circular buffer** for waterfall rows to cap memory (e.g., 100 rows).
 
 ## GPS Manual Fallback
 
-**GPS Manual Fallback**  
+**GPS Manual Fallback**
+
 - If gpsd has no fix (indoors), allow a **manual position** (lat, lon) used until a real fix arrives.
-
-
 
 ## Progressive Loading & Friendly Error Recovery
 
-**Progressive Loading & Friendly Error Recovery**  
-- Show map immediately with cached tiles; then connect services; then start data streams.  
-- Present human-readable error panels with suggested actions (e.g., “Start dump1090 service”).  
+**Progressive Loading & Friendly Error Recovery**
+
+- Show map immediately with cached tiles; then connect services; then start data streams.
+- Present human-readable error panels with suggested actions (e.g., “Start dump1090 service”).
 - Provide action buttons (Retry, Start Service, Open Troubleshooting) where feasible.
-
-
 
 ## Resilient WebSockets
 
-**Resilient WebSockets**  
-- Implement exponential backoff + jitter for reconnects; reset delay on successful open.  
+**Resilient WebSockets**
 
-
+- Implement exponential backoff + jitter for reconnects; reset delay on successful open.
 
 ## Database Batching Policy
 
-**Database Batching Policy**  
-- Batch inserts (e.g., groups of 100) using a transaction wrapper; flush every 5s or at limit.  
+**Database Batching Policy**
 
-
+- Batch inserts (e.g., groups of 100) using a transaction wrapper; flush every 5s or at limit.
 
 ## Mock Mode (No Hardware Development)
 
-**Mock Mode (No Hardware Development)**  
-- `USE_MOCK_DATA=true` to enable mock generators for aircraft, drones, signals, and GPS.  
-- Provide `npm` scripts for doctor/perf tests (`test:services`, `test:mock`, `test:perf`, `doctor`).  
+**Mock Mode (No Hardware Development)**
 
-
+- `USE_MOCK_DATA=true` to enable mock generators for aircraft, drones, signals, and GPS.
+- Provide `npm` scripts for doctor/perf tests (`test:services`, `test:mock`, `test:perf`, `doctor`).
 
 ## Testing Checklist (Minimum Coverage)
 
-**Testing Checklist (Minimum Coverage)**  
-- No hardware connected (mock only)  
-- RTL-SDR only  
-- RTL-SDR + GPS  
-- Indoors (no GPS fix)  
-- 100+ aircraft load  
-- 1+ hour soak (memory leaks)  
-- Malformed DUMP1090 data  
-- Service crash & recovery  
-- Export with large dataset  
+**Testing Checklist (Minimum Coverage)**
+
+- No hardware connected (mock only)
+- RTL-SDR only
+- RTL-SDR + GPS
+- Indoors (no GPS fix)
+- 100+ aircraft load
+- 1+ hour soak (memory leaks)
+- Malformed DUMP1090 data
+- Service crash & recovery
+- Export with large dataset
 - Minimum-spec hardware
-
-
 
 ## Performance Targets
 
-**Performance Targets**  
-- Cold start to map: < **3 s**  
-- Service connection: < **5 s**  
-- First aircraft display: < **10 s**  
-- Memory after 1 hour: < **800 MB** (with limits enabled)  
-- CPU during scanning: < **40%**  
-- Waterfall frame rate: **≥ 10 Hz** on capable hardware (configurable)
+**Performance Targets**
 
+- Cold start to map: < **3 s**
+- Service connection: < **5 s**
+- First aircraft display: < **10 s**
+- Memory after 1 hour: < **800 MB** (with limits enabled)
+- CPU during scanning: < **40%**
+- Waterfall frame rate: **≥ 10 Hz** on capable hardware (configurable)

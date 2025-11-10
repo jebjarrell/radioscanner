@@ -1,8 +1,8 @@
 import React, { createContext, useContext } from 'react';
 
+import { WEBSOCKET_URL } from '../../config/client.js';
 import { useWebSocket } from '../hooks/useWebSocket';
 import type { TelemetryFrame } from '../types';
-import { WEBSOCKET_URL } from '../../config/client.js';
 
 interface TelemetryContextValue {
   telemetry: TelemetryFrame | null;

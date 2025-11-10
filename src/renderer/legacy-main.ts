@@ -1,11 +1,11 @@
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './style.css';
 
+import { WEBSOCKET_URL } from '../config/client.js';
+
 import { MapPanel } from './map/MapPanel.js';
 import { connectWS } from './services/wsReconnect.js';
 import type { TelemetryFrame } from './types.js';
-
-import { WEBSOCKET_URL } from '../config/client.js';
 
 const TELEMETRY_URL = WEBSOCKET_URL;
 

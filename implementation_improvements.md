@@ -1,8 +1,10 @@
 # RF Scanner - Critical Implementation Improvements
 
 ## 1. DUMP1090 Interface (PRIORITY: HIGH)
+
 **Issue:** Confusion between HTTP JSON and SBS text feed
 **Solution:**
+
 ```javascript
 // Standardize on HTTP JSON polling
 class DUMP1090Client {
@@ -25,41 +27,43 @@ class DUMP1090Client {
 ```
 
 ## 2. Remote ID Fallback Parser (PRIORITY: HIGH)
+
 **Issue:** Kismet may not parse Remote ID
 **Solution:**
+
 ```javascript
 // Fallback Remote ID parser for raw BLE advertisements
 function parseRemoteIDAdvertisement(bleAdv) {
   // ASTM F3411-22a Remote ID format
-  const RID_SERVICE_UUID = 0xFFFA;
-  
+  const RID_SERVICE_UUID = 0xfffa;
+
   if (!bleAdv.service_uuids?.includes(RID_SERVICE_UUID)) {
     return null;
   }
-  
+
   // Parse message types
   const MSG_TYPE_BASIC_ID = 0x00;
   const MSG_TYPE_LOCATION = 0x01;
   const MSG_TYPE_SYSTEM = 0x03;
-  
+
   // Extract from manufacturer data
   const mfgData = bleAdv.manufacturer_data;
   if (!mfgData || mfgData.length < 25) return null;
-  
+
   const msgType = mfgData[0];
-  
-  switch(msgType) {
+
+  switch (msgType) {
     case MSG_TYPE_BASIC_ID:
       return {
         droneId: mfgData.slice(2, 22).toString('utf8').trim(),
-        type: 'basic_id'
+        type: 'basic_id',
       };
     case MSG_TYPE_LOCATION:
       return {
         lat: readInt32(mfgData, 2) / 1e7,
         lon: readInt32(mfgData, 6) / 1e7,
         altitude: readUint16(mfgData, 10),
-        type: 'location'
+        type: 'location',
       };
     default:
       return null;
@@ -68,8 +72,10 @@ function parseRemoteIDAdvertisement(bleAdv) {
 ```
 
 ## 3. GPS Manual Fallback (PRIORITY: MEDIUM)
+
 **Issue:** No GPS indoors
 **Solution:**
+
 ```javascript
 class GPSClient {
   constructor() {
@@ -82,19 +88,24 @@ class GPSClient {
   }
 
   getPosition() {
-    return this.gpsdPosition || this.manualPosition || {
-      lat: 37.7749,
-      lon: -122.4194,
-      mode: 0,
-      default: true
-    };
+    return (
+      this.gpsdPosition ||
+      this.manualPosition || {
+        lat: 37.7749,
+        lon: -122.4194,
+        mode: 0,
+        default: true,
+      }
+    );
   }
 }
 ```
 
 ## 4. Waterfall Memory Optimization (PRIORITY: HIGH)
+
 **Issue:** Unbounded memory growth
 **Solution:**
+
 ```javascript
 class OptimizedWaterfall {
   constructor(maxRows = 100, fftSize = 1024) {
@@ -114,17 +125,16 @@ class OptimizedWaterfall {
   getBuffer() {
     // Return view of circular buffer in correct order
     const start = (this.writeIndex % this.maxRows) * this.fftSize;
-    return new Float32Array([
-      ...this.buffer.slice(start),
-      ...this.buffer.slice(0, start)
-    ]);
+    return new Float32Array([...this.buffer.slice(start), ...this.buffer.slice(0, start)]);
   }
 }
 ```
 
 ## 5. Database Batching (PRIORITY: MEDIUM)
+
 **Issue:** Excessive write operations
 **Solution:**
+
 ```javascript
 class BatchedDatabase {
   constructor(db) {
@@ -138,7 +148,7 @@ class BatchedDatabase {
       this.batches.set(table, []);
     }
     this.batches.get(table).push(data);
-    
+
     // Auto-flush at 100 records
     if (this.batches.get(table).length >= 100) {
       this.flushTable(table);
@@ -152,12 +162,12 @@ class BatchedDatabase {
     const columns = Object.keys(batch[0]);
     const placeholders = columns.map(() => '?').join(',');
     const stmt = this.db.prepare(
-      `INSERT INTO ${table} (${columns.join(',')}) VALUES (${placeholders})`
+      `INSERT INTO ${table} (${columns.join(',')}) VALUES (${placeholders})`,
     );
 
     const insertMany = this.db.transaction((records) => {
       for (const record of records) {
-        stmt.run(...columns.map(col => record[col]));
+        stmt.run(...columns.map((col) => record[col]));
       }
     });
 
@@ -174,30 +184,32 @@ class BatchedDatabase {
 ```
 
 ## 6. Progressive Loading (PRIORITY: HIGH)
+
 **Issue:** Blank screen during initialization
 **Solution:**
+
 ```javascript
 // In App.jsx
 function App() {
   const [loadingState, setLoadingState] = useState({
     services: 'connecting',
     map: 'loading',
-    data: 'waiting'
+    data: 'waiting',
   });
 
   useEffect(() => {
     // Progressive initialization
     async function init() {
       // 1. Show map immediately with cached tiles
-      setLoadingState(prev => ({...prev, map: 'ready'}));
-      
+      setLoadingState((prev) => ({ ...prev, map: 'ready' }));
+
       // 2. Connect to services
       await connectToBackend();
-      setLoadingState(prev => ({...prev, services: 'connected'}));
-      
+      setLoadingState((prev) => ({ ...prev, services: 'connected' }));
+
       // 3. Start receiving data
       startWebSocket();
-      setLoadingState(prev => ({...prev, data: 'streaming'}));
+      setLoadingState((prev) => ({ ...prev, data: 'streaming' }));
     }
     init();
   }, []);
@@ -216,8 +228,10 @@ function App() {
 ```
 
 ## 7. User-Friendly Error Recovery (PRIORITY: HIGH)
+
 **Issue:** Technical error messages
 **Solution:**
+
 ```javascript
 const ERROR_HANDLERS = {
   DUMP1090_UNREACHABLE: {
@@ -227,13 +241,13 @@ const ERROR_HANDLERS = {
       {
         label: 'Start Service',
         command: 'sudo systemctl start dump1090-mutability',
-        icon: '🛩️'
+        icon: '🛩️',
       },
       {
         label: 'View Instructions',
-        action: () => showHelp('dump1090')
-      }
-    ]
+        action: () => showHelp('dump1090'),
+      },
+    ],
   },
   NO_SDR_DEVICE: {
     title: 'No Radio Device Found',
@@ -242,13 +256,13 @@ const ERROR_HANDLERS = {
       {
         label: 'Retry Detection',
         action: () => detectDevices(),
-        icon: '📡'
+        icon: '📡',
       },
       {
         label: 'Troubleshooting Guide',
-        action: () => showHelp('sdr')
-      }
-    ]
+        action: () => showHelp('sdr'),
+      },
+    ],
   },
   GPS_NO_FIX: {
     title: 'GPS Signal Lost',
@@ -257,10 +271,10 @@ const ERROR_HANDLERS = {
       {
         label: 'Enter Location',
         action: () => showManualLocationDialog(),
-        icon: '📍'
-      }
-    ]
-  }
+        icon: '📍',
+      },
+    ],
+  },
 };
 
 function ErrorNotification({ error }) {
@@ -272,7 +286,7 @@ function ErrorNotification({ error }) {
       <h3>{handler.title}</h3>
       <p>{handler.message}</p>
       <div className="error-actions">
-        {handler.actions.map(action => (
+        {handler.actions.map((action) => (
           <button onClick={action.action || (() => runCommand(action.command))}>
             {action.icon} {action.label}
           </button>
@@ -284,13 +298,15 @@ function ErrorNotification({ error }) {
 ```
 
 ## 8. Input Validation (PRIORITY: HIGH)
+
 **Issue:** Malformed data can crash app
 **Solution:**
+
 ```javascript
 const validators = {
   aircraft: (ac) => {
     if (!ac.hex || !/^[a-f0-9]{6}$/i.test(ac.hex)) return null;
-    
+
     return {
       icao: ac.hex,
       callsign: ac.flight?.trim().substring(0, 8),
@@ -298,22 +314,22 @@ const validators = {
       lon: validateLon(ac.lon),
       altitude: clamp(ac.altitude, -2000, 60000),
       speed: clamp(ac.speed, 0, 800),
-      heading: clamp(ac.track, 0, 359)
+      heading: clamp(ac.track, 0, 359),
     };
   },
-  
+
   drone: (drone) => {
     if (!drone.drone_id || drone.drone_id.length > 20) return null;
-    
+
     return {
       droneId: drone.drone_id.substring(0, 20),
       lat: validateLat(drone.lat),
       lon: validateLon(drone.lon),
       altitude: clamp(drone.altitude, 0, 400), // 400m max for drones
       operatorLat: validateLat(drone.operator_lat),
-      operatorLon: validateLon(drone.operator_lon)
+      operatorLon: validateLon(drone.operator_lon),
     };
-  }
+  },
 };
 
 function validateLat(lat) {
@@ -333,8 +349,10 @@ function clamp(val, min, max) {
 ```
 
 ## 9. Resource Limits (PRIORITY: MEDIUM)
+
 **Issue:** Memory exhaustion from too many objects
 **Solution:**
+
 ```javascript
 class ResourceLimiter {
   constructor() {
@@ -342,27 +360,27 @@ class ResourceLimiter {
       aircraft: 500,
       drones: 100,
       signals: 1000,
-      waterfallRows: 100
+      waterfallRows: 100,
     };
-    
+
     this.collections = {
       aircraft: new Map(),
       drones: new Map(),
-      signals: []
+      signals: [],
     };
   }
 
   add(type, id, data) {
     const collection = this.collections[type];
     const limit = this.limits[type];
-    
+
     if (collection instanceof Map) {
       // For aircraft/drones, remove oldest if at limit
       if (collection.size >= limit && !collection.has(id)) {
         const firstKey = collection.keys().next().value;
         collection.delete(firstKey);
       }
-      collection.set(id, {...data, timestamp: Date.now()});
+      collection.set(id, { ...data, timestamp: Date.now() });
     } else {
       // For signals array
       if (collection.length >= limit) {
@@ -374,16 +392,16 @@ class ResourceLimiter {
 
   get(type) {
     const collection = this.collections[type];
-    return collection instanceof Map 
-      ? Array.from(collection.values())
-      : collection;
+    return collection instanceof Map ? Array.from(collection.values()) : collection;
   }
 }
 ```
 
 ## 10. Mock Data Generator (PRIORITY: LOW)
+
 **Issue:** Can't develop without hardware
 **Solution:**
+
 ```javascript
 class MockDataGenerator {
   constructor(centerLat = 37.7749, centerLon = -122.4194) {
@@ -404,7 +422,7 @@ class MockDataGenerator {
     // Update positions
     setInterval(() => {
       this.updatePositions();
-      
+
       const data = {
         aircraft: Array.from(this.aircraft.values()),
         drones: Array.from(this.drones.values()),
@@ -412,8 +430,8 @@ class MockDataGenerator {
         gps: {
           lat: this.center.lat,
           lon: this.center.lon,
-          mode: 3
-        }
+          mode: 3,
+        },
       };
 
       wsServer.broadcast(JSON.stringify(data));
@@ -428,14 +446,14 @@ class MockDataGenerator {
       lon: this.center.lon + (Math.random() - 0.5) * 0.5,
       altitude: 5000 + Math.random() * 30000,
       speed: 200 + Math.random() * 300,
-      heading: Math.random() * 360
+      heading: Math.random() * 360,
     };
   }
 
   generateDrone(index) {
     const droneLat = this.center.lat + (Math.random() - 0.5) * 0.02;
     const droneLon = this.center.lon + (Math.random() - 0.5) * 0.02;
-    
+
     return {
       droneId: `MOCKDRONE${index}`,
       manufacturer: ['DJI', 'Autel', 'Parrot'][index % 3],
@@ -445,16 +463,16 @@ class MockDataGenerator {
       operatorLat: droneLat + (Math.random() - 0.5) * 0.001,
       operatorLon: droneLon + (Math.random() - 0.5) * 0.001,
       speed: Math.random() * 20,
-      heading: Math.random() * 360
+      heading: Math.random() * 360,
     };
   }
 
   generateSignals() {
-    return Array.from({length: 20}, () => ({
+    return Array.from({ length: 20 }, () => ({
       frequency: 108 + Math.random() * 29, // Airband range
       signalStrength: -80 + Math.random() * 50,
       bandwidth: 8000 + Math.random() * 17000,
-      bandName: 'Airband'
+      bandName: 'Airband',
     }));
   }
 
@@ -464,10 +482,10 @@ class MockDataGenerator {
       const rad = (ac.heading * Math.PI) / 180;
       const speed = ac.speed * 0.514444; // knots to m/s
       const distance = speed / 111111; // meters to degrees (rough)
-      
+
       ac.lat += Math.cos(rad) * distance;
       ac.lon += Math.sin(rad) * distance;
-      
+
       // Random heading change
       ac.heading = (ac.heading + (Math.random() - 0.5) * 5 + 360) % 360;
     }
@@ -488,6 +506,7 @@ if (process.env.NODE_ENV === 'development' && process.env.USE_MOCK_DATA) {
 ```
 
 ## 11. Setup Script Improvements (PRIORITY: MEDIUM)
+
 ```bash
 # Add to setup.sh
 
@@ -507,28 +526,28 @@ backup_configs() {
 # Verification tests
 verify_installation() {
     echo "Running verification tests..."
-    
+
     # Test RTL-SDR
     if rtl_test -t 2>&1 | grep -q "Found"; then
         echo "✅ RTL-SDR detected"
     else
         echo "⚠️  RTL-SDR not detected (may need to plug in device)"
     fi
-    
+
     # Test dump1090
     if systemctl is-active --quiet dump1090-mutability; then
         echo "✅ DUMP1090 running"
     else
         echo "⚠️  DUMP1090 not running"
     fi
-    
+
     # Test Kismet
     if pgrep kismet > /dev/null; then
         echo "✅ Kismet running"
     else
         echo "⚠️  Kismet not running"
     fi
-    
+
     # Test GPS
     if timeout 2 gpspipe -w -n 1 > /dev/null 2>&1; then
         echo "✅ GPS responding"
@@ -539,7 +558,9 @@ verify_installation() {
 ```
 
 ## 12. Quick Test Commands (PRIORITY: LOW)
+
 Add to package.json:
+
 ```json
 {
   "scripts": {
@@ -554,18 +575,21 @@ Add to package.json:
 ## Implementation Priority Order
 
 ### Phase 1 (Critical):
+
 1. DUMP1090 HTTP JSON interface
 2. Input validation
 3. Resource limits
 4. Waterfall memory optimization
 
 ### Phase 2 (Important):
+
 5. GPS manual fallback
 6. User-friendly error recovery
 7. Progressive loading
 8. Database batching
 
 ### Phase 3 (Nice to have):
+
 9. Remote ID fallback parser
 10. Mock data generator
 11. Setup script improvements
@@ -587,7 +611,7 @@ Add to package.json:
 ## Performance Targets
 
 - Cold start to map: < 3 seconds
-- Service connection: < 5 seconds  
+- Service connection: < 5 seconds
 - First aircraft display: < 10 seconds
 - Memory after 1 hour: < 800 MB
 - CPU during scanning: < 40%

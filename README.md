@@ -4,12 +4,12 @@ OnTheGo Scanner couples an Electron shell with a Vite/TypeScript renderer to vis
 
 ## Services at a Glance
 
-| Service | Purpose | Default Endpoint |
-| --- | --- | --- |
-| RTL-SDR (`rtlTcp`) | Raw IQ capture that drives the RF waterfall and signal status. | `rtl_tcp` on `127.0.0.1:1234` |
-| ADS-B (`dump1090`) | Aircraft positions and metadata rendered on the map. | `http://127.0.0.1:8080/data/aircraft.json` |
-| Remote ID (`kismet`) | RID availability and drone presence. | `http://127.0.0.1:2501/system/status.json` |
-| GPS (`gps`) | Fix data for localization, fallbacks, and signal health. | `gpsd` on `127.0.0.1:2947` |
+| Service              | Purpose                                                        | Default Endpoint                           |
+| -------------------- | -------------------------------------------------------------- | ------------------------------------------ |
+| RTL-SDR (`rtlTcp`)   | Raw IQ capture that drives the RF waterfall and signal status. | `rtl_tcp` on `127.0.0.1:1234`              |
+| ADS-B (`dump1090`)   | Aircraft positions and metadata rendered on the map.           | `http://127.0.0.1:8080/data/aircraft.json` |
+| Remote ID (`kismet`) | RID availability and drone presence.                           | `http://127.0.0.1:2501/system/status.json` |
+| GPS (`gps`)          | Fix data for localization, fallbacks, and signal health.       | `gpsd` on `127.0.0.1:2947`                 |
 
 The renderer dependency matrix (All Services / RF-only / Localize-only / Offline Demo) greys out layers when the required services are unavailable, and every service row exposes an in-app **Retry** action that proxies `HealthMonitor.retry()`.
 
@@ -33,12 +33,12 @@ Set `USE_MOCK_DATA=1` (or `true/yes/on`) before launching the app to swap in moc
 
 ## Troubleshooting
 
-| Service | Symptoms | Quick Checks |
-| --- | --- | --- |
-| RTL-SDR | Waterfall/signal tiles greyed out, no RF markers. | Ensure `rtl_tcp` is listening on `127.0.0.1:1234` and the dongle is powered. |
-| ADS-B | Aircraft layer disabled or stuck. | Confirm `dump1090` serves `/data/aircraft.json` on `127.0.0.1:8080`. |
-| Remote ID | RID overlay missing, drone badge unavailable. | Start Kismet, confirm Remote ID capture is enabled (`127.0.0.1:2501`). |
-| GPS | Dependency matrix blocks localization, GPS icon grey. | Verify `gpsd` on `127.0.0.1:2947` with sky view, or configure manual fallback. |
+| Service   | Symptoms                                              | Quick Checks                                                                   |
+| --------- | ----------------------------------------------------- | ------------------------------------------------------------------------------ |
+| RTL-SDR   | Waterfall/signal tiles greyed out, no RF markers.     | Ensure `rtl_tcp` is listening on `127.0.0.1:1234` and the dongle is powered.   |
+| ADS-B     | Aircraft layer disabled or stuck.                     | Confirm `dump1090` serves `/data/aircraft.json` on `127.0.0.1:8080`.           |
+| Remote ID | RID overlay missing, drone badge unavailable.         | Start Kismet, confirm Remote ID capture is enabled (`127.0.0.1:2501`).         |
+| GPS       | Dependency matrix blocks localization, GPS icon grey. | Verify `gpsd` on `127.0.0.1:2947` with sky view, or configure manual fallback. |
 
 When in doubt, use the in-app **Retry** buttons per service and monitor the telemetry badge for reconnection state.
 

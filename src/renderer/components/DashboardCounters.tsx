@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 
+import { BACKEND_URL } from '../../config/client.js';
 import { useTelemetry } from '../contexts/TelemetryContext';
 import { useAircraft } from '../features/aircraft/hooks/useAircraft';
 import { useDrones } from '../features/drone/hooks/useDrones';
 import { RF_BANDS, RF_BAND_OPTIONS, type RfBandKey } from '../features/rf/bands';
 import { useSignals } from '../hooks/useSignals';
-import { BACKEND_URL } from '../../config/client.js';
 
 import { SettingsPanel } from './SettingsPanel';
 

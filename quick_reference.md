@@ -3,6 +3,7 @@
 ## 🚨 CRITICAL FIXES (Do These First!)
 
 ### 1. Fix DUMP1090 Interface
+
 ```javascript
 // ❌ DON'T USE PORT 30003 SBS TEXT
 // ✅ USE HTTP JSON POLLING
@@ -11,6 +12,7 @@ setInterval(() => fetch(DUMP1090_URL), 1000); // Poll every second
 ```
 
 ### 2. Add Input Validation
+
 ```javascript
 // Validate ALL external data
 if (!aircraft.hex || !/^[a-f0-9]{6}$/i.test(aircraft.hex)) {
@@ -22,27 +24,30 @@ if (aircraft.lat < -90 || aircraft.lat > 90) {
 ```
 
 ### 3. Set Resource Limits
+
 ```javascript
 const LIMITS = {
   MAX_AIRCRAFT: 500,
   MAX_DRONES: 100,
   MAX_SIGNALS: 1000,
-  WATERFALL_ROWS: 100
+  WATERFALL_ROWS: 100,
 };
 ```
 
 ## 📋 Service Health Checks
 
 ### DUMP1090
+
 ```javascript
 // Check: HTTP endpoint responds
 fetch('http://localhost:8080/data/aircraft.json')
-  .then(res => res.json())
+  .then((res) => res.json())
   .then(() => console.log('✅ DUMP1090 OK'))
   .catch(() => console.log('❌ DUMP1090 FAIL'));
 ```
 
 ### Kismet
+
 ```javascript
 // Check: REST API responds
 fetch('http://localhost:2501/system/status.json')
@@ -51,6 +56,7 @@ fetch('http://localhost:2501/system/status.json')
 ```
 
 ### RTL-SDR
+
 ```javascript
 // Check: rtl_tcp connects
 const socket = net.connect(1234, '127.0.0.1');
@@ -59,6 +65,7 @@ socket.on('error', () => console.log('❌ RTL-SDR FAIL'));
 ```
 
 ### GPS
+
 ```javascript
 // Check: gpsd responds
 const gps = net.connect(2947, '127.0.0.1');
@@ -70,18 +77,19 @@ gps.on('connect', () => {
 
 ## 🔧 Common Issues & Quick Fixes
 
-| Problem | Solution | Command |
-|---------|----------|---------|
-| No aircraft shown | Start DUMP1090 | `sudo systemctl start dump1090-mutability` |
-| No drones detected | Start Kismet | `kismet --daemonize --silent` |
-| RTL-SDR not found | Check USB | `rtl_test -t` |
-| GPS no fix | Go outside or set manual | `gpspipe -w -n 5` |
-| High memory usage | Restart services | `sudo systemctl restart dump1090-mutability` |
-| Port already in use | Find and kill | `lsof -i :3000` then `kill -9 <PID>` |
+| Problem             | Solution                 | Command                                      |
+| ------------------- | ------------------------ | -------------------------------------------- |
+| No aircraft shown   | Start DUMP1090           | `sudo systemctl start dump1090-mutability`   |
+| No drones detected  | Start Kismet             | `kismet --daemonize --silent`                |
+| RTL-SDR not found   | Check USB                | `rtl_test -t`                                |
+| GPS no fix          | Go outside or set manual | `gpspipe -w -n 5`                            |
+| High memory usage   | Restart services         | `sudo systemctl restart dump1090-mutability` |
+| Port already in use | Find and kill            | `lsof -i :3000` then `kill -9 <PID>`         |
 
 ## 🏗️ Development Shortcuts
 
 ### Start All Services
+
 ```bash
 #!/bin/bash
 sudo systemctl start dump1090-mutability
@@ -91,11 +99,13 @@ rtl_tcp -a 127.0.0.1 -p 1234 &
 ```
 
 ### Mock Mode (No Hardware)
+
 ```bash
 USE_MOCK_DATA=true npm start
 ```
 
 ### Test With Sample Data
+
 ```javascript
 // In backend/server.js
 if (process.env.USE_MOCK_DATA) {
@@ -149,6 +159,7 @@ npm run lint        # Check code style
 ## 🚀 Deployment Checklist
 
 ### Before Release
+
 - [ ] All services start automatically
 - [ ] Error messages are user-friendly
 - [ ] Export function tested
@@ -157,6 +168,7 @@ npm run lint        # Check code style
 - [ ] CPU usage < 50% during scanning
 
 ### Package Contents
+
 ```
 dist/
 ├── OnTheGoScanner_1.0.0_amd64.deb    # Debian/Ubuntu
@@ -168,15 +180,15 @@ dist/
 
 ```sql
 -- Count aircraft in last minute
-SELECT COUNT(*) FROM aircraft 
+SELECT COUNT(*) FROM aircraft
 WHERE last_seen > datetime('now', '-1 minute');
 
 -- Find strongest signals
-SELECT frequency_mhz, signal_strength FROM rf_signals 
+SELECT frequency_mhz, signal_strength FROM rf_signals
 ORDER BY signal_strength DESC LIMIT 10;
 
 -- Check database size
-SELECT page_count * page_size / 1024.0 / 1024.0 as size_mb 
+SELECT page_count * page_size / 1024.0 / 1024.0 as size_mb
 FROM pragma_page_count(), pragma_page_size();
 
 -- Clear old data
@@ -188,6 +200,7 @@ DELETE FROM rf_signals WHERE timestamp < datetime('now', '-1 hour');
 ## 🆘 Emergency Debugging
 
 ### Check Everything
+
 ```bash
 #!/bin/bash
 echo "=== Service Status ==="

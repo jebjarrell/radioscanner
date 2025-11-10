@@ -9,9 +9,11 @@
 ## 📦 Delivered Documents
 
 ### 1. **Product Requirements Document (PRD) v2.0**
+
 **File:** `OnTheGo_Scanner_PRD_v2.md`
 
 **Contents:**
+
 - Executive Summary & Product Vision
 - Target User Personas (Curious Citizen Chris, Emergency Responder Emma)
 - 20+ Detailed User Stories with Acceptance Criteria
@@ -26,6 +28,7 @@
 - Success Criteria Checklist
 
 **Key Decisions:**
+
 - Platform: Linux (Ubuntu/Debian) first
 - Tech Stack: Electron + Node.js + React
 - Hardware: RTL-SDR, HackRF, USB GPS
@@ -36,9 +39,11 @@
 ---
 
 ### 2. **Technical Requirements Document (TRD) v2.0**
+
 **File:** `OnTheGo_Scanner_TRD_v2.md`
 
 **Contents:**
+
 - Complete System Architecture (diagrams)
 - Technology Stack Details
 - Component Specifications (7 major components)
@@ -64,6 +69,7 @@
   - Performance benchmarks
 
 **Key Technical Decisions:**
+
 - Backend: Fastify HTTP server + WebSocket (port 3000/3001)
 - Frontend: React with MapLibre GL JS for mapping
 - SDR Interface: rtl_tcp (simple) or SoapySDRServer (future)
@@ -74,9 +80,11 @@
 ---
 
 ### 3. **Installation Script (setup.sh)**
+
 **File:** `setup.sh` (executable)
 
 **What It Does:**
+
 - Detects Ubuntu/Debian OS
 - Updates system packages
 - Installs Node.js 18 LTS (via NodeSource)
@@ -92,6 +100,7 @@
 - Provides post-installation instructions
 
 **Usage:**
+
 ```bash
 sudo ./setup.sh
 ```
@@ -103,12 +112,14 @@ sudo ./setup.sh
 ## 🎯 What's Been Accomplished
 
 ### ✅ Complete Requirements Definition
+
 - All MVP features clearly scoped
 - User stories with acceptance criteria
 - Success metrics defined
 - Out-of-scope features documented (v1.5, v2.0)
 
 ### ✅ Complete Technical Design
+
 - System architecture designed
 - Component interactions specified
 - API contracts defined
@@ -116,6 +127,7 @@ sudo ./setup.sh
 - Performance targets set
 
 ### ✅ Automated Installation
+
 - One-command setup for all dependencies
 - Service configuration automated
 - User permission management
@@ -126,9 +138,11 @@ sudo ./setup.sh
 ## 🚀 Next Steps for Implementation
 
 ### Phase 1: Project Scaffolding (Week 1)
+
 **Goal:** Create project structure and basic skeleton
 
 **Tasks:**
+
 1. Create project directory structure (see TRD File Structure)
 2. Initialize npm project: `npm init`
 3. Install dependencies: `npm install fastify ws better-sqlite3 ...`
@@ -138,6 +152,7 @@ sudo ./setup.sh
 7. Test basic Electron window launches
 
 **Deliverables:**
+
 - Empty project structure
 - package.json with all dependencies
 - Launchable (but empty) Electron window
@@ -145,9 +160,11 @@ sudo ./setup.sh
 ---
 
 ### Phase 2: Backend Core (Week 2-3)
+
 **Goal:** Implement data collection from external services
 
 **Tasks:**
+
 1. Implement DUMP1090 Client
    - Connect to TCP port 30003
    - Parse JSON aircraft data
@@ -176,11 +193,13 @@ sudo ./setup.sh
    - Implement insert/query functions
 
 **Testing:**
+
 - Unit tests for each client
 - Integration test: Can all clients connect to services?
 - Manual test: Run backend, check WebSocket output
 
 **Deliverables:**
+
 - Working backend server
 - Real aircraft data flowing via WebSocket
 - Real drone data (if drone present)
@@ -189,9 +208,11 @@ sudo ./setup.sh
 ---
 
 ### Phase 3: Frontend Core (Week 4-5)
+
 **Goal:** Display data on map with basic UI
 
 **Tasks:**
+
 1. Implement App.jsx
    - WebSocket connection
    - State management (aircraft, drones, GPS)
@@ -216,11 +237,13 @@ sudo ./setup.sh
    - Colors, fonts, spacing
 
 **Testing:**
+
 - Visual test: Does map display?
 - Data test: Do aircraft markers appear?
 - Interaction test: Can user pan/zoom map?
 
 **Deliverables:**
+
 - Functional map displaying real aircraft
 - Dashboard showing live statistics
 - Status bar showing service health
@@ -228,9 +251,11 @@ sudo ./setup.sh
 ---
 
 ### Phase 4: Spectrum Scanning (Week 6-7)
+
 **Goal:** Implement waterfall visualization and signal detection
 
 **Tasks:**
+
 1. Implement SDR Client (Complete)
    - Implement FFT processing (fft.js library)
    - Power spectrum calculation (dB conversion)
@@ -253,11 +278,13 @@ sudo ./setup.sh
    - Display signal count in dashboard
 
 **Testing:**
+
 - Visual test: Does waterfall display spectrum?
 - Tuning test: Does band change update display?
 - Signal test: Are strong signals detected?
 
 **Deliverables:**
+
 - Working waterfall display
 - Band selection with retuning
 - Signal detection and display
@@ -265,9 +292,11 @@ sudo ./setup.sh
 ---
 
 ### Phase 5: Data Management & Polish (Week 8)
+
 **Goal:** Complete MVP with export and session management
 
 **Tasks:**
+
 1. Implement Data Export
    - Backend: Generate CSV files (aircraft, drones, signals)
    - Frontend: File picker dialog
@@ -291,12 +320,14 @@ sudo ./setup.sh
    - Canvas rendering optimization
 
 **Testing:**
+
 - Export test: Can user export data to CSV?
 - Session test: Does database clear on exit?
 - UI test: Is interface responsive and intuitive?
 - Performance test: CPU <50%, RAM <650 MB?
 
 **Deliverables:**
+
 - Complete MVP with all features
 - Polished UI
 - Data export functional
@@ -305,9 +336,11 @@ sudo ./setup.sh
 ---
 
 ### Phase 6: Testing & Documentation (Week 9-10)
+
 **Goal:** Ensure quality and prepare for release
 
 **Tasks:**
+
 1. Write Automated Tests
    - Backend unit tests (Jest)
    - Frontend component tests (React Testing Library)
@@ -335,12 +368,14 @@ sudo ./setup.sh
    - Test AppImage execution
 
 **Testing:**
+
 - Install test: Can user install from .deb?
 - Launch test: Does app start without errors?
 - Feature test: Do all MVP features work?
 - Crash test: Does app handle errors gracefully?
 
 **Deliverables:**
+
 - Test coverage >70%
 - Complete user documentation
 - Clean, production-ready code
@@ -351,6 +386,7 @@ sudo ./setup.sh
 ## 📋 Implementation Checklist
 
 ### Pre-Development
+
 - [ ] Review PRD and TRD thoroughly
 - [ ] Set up development machine (Ubuntu/Debian)
 - [ ] Run setup.sh to install dependencies
@@ -358,6 +394,7 @@ sudo ./setup.sh
 - [ ] Test SDR and GPS hardware
 
 ### Development Milestones
+
 - [ ] Phase 1: Project scaffolding (Week 1)
 - [ ] Phase 2: Backend core (Week 2-3)
 - [ ] Phase 3: Frontend core (Week 4-5)
@@ -366,6 +403,7 @@ sudo ./setup.sh
 - [ ] Phase 6: Testing & documentation (Week 9-10)
 
 ### Pre-Release
+
 - [ ] All acceptance criteria met (PRD Appendix E)
 - [ ] Performance targets achieved (TRD Appendix D)
 - [ ] User documentation complete
@@ -377,6 +415,7 @@ sudo ./setup.sh
 ## 🛠️ Development Tools & Resources
 
 ### Required Hardware (for Testing)
+
 - **RTL-SDR v3 or v4** ($35-40)
   - For airband, marine, NOAA, FRS/GMRS, Ham bands
   - Available: RTL-SDR Blog, Amazon, etc.
@@ -388,6 +427,7 @@ sudo ./setup.sh
   - u-blox NEO-6M modules
 
 ### Recommended Development Environment
+
 - **OS:** Ubuntu 22.04 LTS (or Debian 11)
 - **IDE:** Visual Studio Code
   - Extensions: ESLint, Prettier, React DevTools
@@ -396,6 +436,7 @@ sudo ./setup.sh
 - **Version Control:** Git + GitHub
 
 ### Useful Commands
+
 ```bash
 # Start services
 sudo systemctl start dump1090-mutability
@@ -425,17 +466,18 @@ npm run build                  # Production build
 
 ## 📊 Estimated Effort
 
-| Phase | Duration | Complexity | Key Risks |
-|-------|----------|------------|-----------|
-| 1. Scaffolding | 1 week | Low | None |
-| 2. Backend Core | 2 weeks | Medium | Kismet Remote ID parsing |
-| 3. Frontend Core | 2 weeks | Medium | MapLibre performance |
-| 4. Spectrum Scanning | 2 weeks | High | FFT performance, signal detection |
-| 5. Data Management | 1 week | Low | None |
-| 6. Testing & Docs | 2 weeks | Medium | Cross-platform issues |
-| **Total** | **10 weeks** | | |
+| Phase                | Duration     | Complexity | Key Risks                         |
+| -------------------- | ------------ | ---------- | --------------------------------- |
+| 1. Scaffolding       | 1 week       | Low        | None                              |
+| 2. Backend Core      | 2 weeks      | Medium     | Kismet Remote ID parsing          |
+| 3. Frontend Core     | 2 weeks      | Medium     | MapLibre performance              |
+| 4. Spectrum Scanning | 2 weeks      | High       | FFT performance, signal detection |
+| 5. Data Management   | 1 week       | Low        | None                              |
+| 6. Testing & Docs    | 2 weeks      | Medium     | Cross-platform issues             |
+| **Total**            | **10 weeks** |            |                                   |
 
 **Assumes:** 1 full-time developer with:
+
 - Strong JavaScript/Node.js skills
 - React experience
 - Basic understanding of SDR concepts
@@ -448,11 +490,13 @@ npm run build                  # Production build
 ## 🎓 Learning Resources
 
 ### SDR Fundamentals
+
 - **RTL-SDR Blog:** https://www.rtl-sdr.com/
 - **RTL-SDR Quick Start Guide:** https://www.rtl-sdr.com/rtl-sdr-quick-start-guide/
 - **Great Scott Gadgets SDR Tutorial:** https://greatscottgadgets.com/sdr/
 
 ### Technologies
+
 - **Electron Documentation:** https://www.electronjs.org/docs
 - **React Documentation:** https://react.dev/
 - **MapLibre GL JS:** https://maplibre.org/maplibre-gl-js-docs/
@@ -460,12 +504,14 @@ npm run build                  # Production build
 - **better-sqlite3:** https://github.com/WiseLibs/better-sqlite3
 
 ### External Tools
+
 - **DUMP1090 Documentation:** https://github.com/antirez/dump1090
 - **Kismet Documentation:** https://www.kismetwireless.net/docs/
 - **SoapySDR Wiki:** https://github.com/pothosware/SoapySDR/wiki
 - **gpsd Documentation:** https://gpsd.gitlab.io/gpsd/
 
 ### Remote ID Standards
+
 - **ASTM F3411 Standard:** Remote ID specification
 - **FAA Remote ID Rule:** https://www.faa.gov/uas/getting_started/remote_id
 
@@ -474,11 +520,13 @@ npm run build                  # Production build
 ## 📞 Support & Feedback
 
 ### During Development
+
 - **Technical Questions:** Refer to TRD Appendix C (Troubleshooting)
 - **Feature Clarifications:** Refer to PRD User Stories
 - **Design Decisions:** Document in `docs/ARCHITECTURE_DECISIONS.md`
 
 ### Post-MVP
+
 - **Issue Tracking:** Use GitHub Issues
 - **User Feedback:** Create `docs/FEEDBACK.md`
 - **Version Planning:** See PRD Out of Scope (v1.5, v2.0)
@@ -490,6 +538,7 @@ npm run build                  # Production build
 MVP is considered **successful** when:
 
 ### Functional Criteria
+
 - ✅ User can plug in RTL-SDR and see aircraft on map
 - ✅ User can detect drones broadcasting Remote ID
 - ✅ User can scan a frequency band and see waterfall
@@ -497,6 +546,7 @@ MVP is considered **successful** when:
 - ✅ All services (DUMP1090, Kismet, gpsd) integrate correctly
 
 ### Quality Criteria
+
 - ✅ No crashes during 30-minute session
 - ✅ CPU usage <50% during active scanning
 - ✅ Memory usage <650 MB
@@ -504,6 +554,7 @@ MVP is considered **successful** when:
 - ✅ Waterfall maintains 10 Hz frame rate
 
 ### User Experience Criteria
+
 - ✅ Installation completes in <10 minutes
 - ✅ New user sees aircraft within 5 minutes of first launch
 - ✅ All UI controls are intuitive (no documentation required for basic use)
@@ -514,6 +565,7 @@ MVP is considered **successful** when:
 ## 📝 Version Roadmap
 
 ### v1.0 (Current MVP) - Linux
+
 - RTL-SDR + HackRF support
 - Aircraft tracking (DUMP1090)
 - Drone detection (Kismet Remote ID)
@@ -522,12 +574,14 @@ MVP is considered **successful** when:
 - Session-only data storage
 
 ### v1.5 - Windows Port
+
 - Windows .exe installer
 - Bundled dependencies
 - Windows-specific driver handling
 - Same features as v1.0
 
 ### v2.0 - Advanced Features
+
 - Alert system (proximity, emergency frequencies)
 - Custom CSV frequency import
 - RadioReference integration
@@ -546,6 +600,7 @@ MVP is considered **successful** when:
 This project provides a **complete blueprint** for building a user-friendly RF awareness application. The PRD defines **what** to build, the TRD specifies **how** to build it, and the setup script provides the **foundation** for development.
 
 **Key Success Factors:**
+
 1. **Follow the PRD user stories** - they define success
 2. **Use the TRD component specs** - they're battle-tested patterns
 3. **Test incrementally** - don't wait until Phase 6
@@ -559,6 +614,7 @@ Good luck! 🚀
 ---
 
 **Delivered Files:**
+
 1. `OnTheGo_Scanner_PRD_v2.md` (50+ pages)
 2. `OnTheGo_Scanner_TRD_v2.md` (60+ pages)
 3. `setup.sh` (executable installation script)
@@ -566,8 +622,8 @@ Good luck! 🚀
 
 **Total Documentation:** 120+ pages of comprehensive requirements and technical specifications.
 
-
 ## Update Checklist (v3)
+
 - ✅ Standardize SDR transport on `rtl_tcp:1234` for MVP; defer SoapySDR to vNext.
 - ✅ ADS-B input via dump1090 HTTP JSON (`/data/aircraft.json`, :8080); SBS:30003 optional with parser.
 - ✅ Kismet Remote ID: feature-detect; fallback raw BLE or `opendroneid-core-c`; operator location optional.
@@ -580,8 +636,8 @@ Good luck! 🚀
 - ✅ Tests: mock feeds, integration harness, initial CI skeleton.
 - ✅ Band-plan caveats and ASTM F3411-22a coverage documented.
 
-
 ## Update Checklist (v4)
+
 - ✅ Input validation & resource limits documented and enforced
 - ✅ DUMP1090 HTTP JSON polling standardized at 1 Hz
 - ✅ FFT moved to Worker, circular-buffer waterfall; ≥10 Hz target on capable hardware

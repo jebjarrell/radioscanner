@@ -3,8 +3,9 @@ import React from 'react';
 import { useSelection } from '../../contexts/SelectionContext';
 import { formatDistance } from '../../utils/geo';
 import { formatTimeSince } from '../../utils/time';
-import { useAircraft } from './hooks/useAircraft';
+
 import styles from './AircraftDetail.module.css';
+import { useAircraft } from './hooks/useAircraft';
 
 export const AircraftDetail: React.FC = () => {
   const aircraft = useAircraft();
