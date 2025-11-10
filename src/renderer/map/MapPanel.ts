@@ -8,12 +8,12 @@ import {
 } from '../../types/services.js';
 import type { Drone } from '../features/drone/types.js';
 import type { TelemetryAircraft, TelemetryFrame, TelemetryHealthSnapshot } from '../types.js';
+import { getMapStyleUrl } from '../utils/mapStyles.js';
 import { WaterfallCanvas } from '../waterfall/WaterfallCanvas.js';
 
 type LayerKey = 'aircraft' | 'drones' | 'signals' | 'waterfall';
 type DependencyMode = 'all' | 'rfOnly' | 'localizeOnly' | 'offlineDemo';
 
-const MAP_STYLE_URL = 'https://demotiles.maplibre.org/style.json';
 const MAP_DEFAULT_CENTER: [number, number] = [-73.935242, 40.73061];
 const DEFAULT_ZOOM = 9.5;
 
@@ -97,6 +97,7 @@ interface MatrixRow {
 
 interface MapPanelOptions {
   version: string;
+  mapStyleId?: string;
   onAircraftClick?: (icao: string) => void;
   onDroneClick?: (droneId: string) => void;
 }
@@ -134,6 +135,7 @@ export class MapPanel {
   private readonly retryResetTimers = new Map<ServiceKey, number>();
   private readonly onAircraftClick?: (icao: string) => void;
   private readonly onDroneClick?: (droneId: string) => void;
+  private mapStyleId: string;
 
   private latestFrame: TelemetryFrame | null = null;
   private performanceMode = false;
@@ -157,6 +159,7 @@ export class MapPanel {
     this.root.classList.add('app-shell');
     this.onAircraftClick = options.onAircraftClick;
     this.onDroneClick = options.onDroneClick;
+    this.mapStyleId = options.mapStyleId || 'demotiles';
 
     this.panel = document.createElement('div');
     this.panel.className = 'map-panel';
@@ -312,6 +315,12 @@ export class MapPanel {
     this.versionBadge.textContent = `v${version}`;
   }
 
+  public setMapStyle(styleId: string): void {
+    this.mapStyleId = styleId;
+    const styleUrl = getMapStyleUrl(styleId);
+    this.map.setStyle(styleUrl);
+  }
+
   public isLayerEnabled(layer: LayerKey): boolean {
     return this.layerState[layer];
   }
@@ -324,9 +333,12 @@ export class MapPanel {
   }
 
   private createMap(): MapLibreMap {
+    // Get map style from options or use default
+    const styleUrl = getMapStyleUrl(this.mapStyleId || 'demotiles');
+
     const map = new MapLibreMap({
       container: this.mapContainer,
-      style: MAP_STYLE_URL,
+      style: styleUrl,
       center: MAP_DEFAULT_CENTER,
       zoom: DEFAULT_ZOOM,
       attributionControl: false,

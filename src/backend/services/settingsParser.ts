@@ -78,10 +78,9 @@ export function parseSettings(flat: Record<string, string>): AppSettings {
       gpsdPort: getNum('services.gpsdPort', 2947),
     },
     preferences: {
-      distanceUnit: (get('preferences.distanceUnit', 'miles') as
-        | 'miles'
-        | 'kilometers'
-        | 'nautical') || 'miles',
+      distanceUnit:
+        (get('preferences.distanceUnit', 'miles') as 'miles' | 'kilometers' | 'nautical') ||
+        'miles',
       mapStyle: get('preferences.mapStyle', 'demotiles'),
       mapDefaultCenterLat: getNum('preferences.mapDefaultCenterLat', 40.7306),
       mapDefaultCenterLon: getNum('preferences.mapDefaultCenterLon', -73.9352),
@@ -94,19 +93,19 @@ export function parseSettings(flat: Record<string, string>): AppSettings {
       aircraftProximityThresholdMiles: getNum('notifications.aircraftProximityThresholdMiles', 5),
       newSignal: getBool('notifications.newSignal', true),
       duration: getNum('notifications.duration', 4000),
-      position: (get('notifications.position', 'top-right') as
-        | 'top-right'
-        | 'top-left'
-        | 'bottom-right'
-        | 'bottom-left') || 'top-right',
+      position:
+        (get('notifications.position', 'top-right') as
+          | 'top-right'
+          | 'top-left'
+          | 'bottom-right'
+          | 'bottom-left') || 'top-right',
     },
     performance: {
       waterfallMaxRows: getNum('performance.waterfallMaxRows', 100),
       maxAircraftDisplayed: getNum('performance.maxAircraftDisplayed', 200),
-      peakDetectionSensitivity: (get('performance.peakDetectionSensitivity', 'medium') as
-        | 'low'
-        | 'medium'
-        | 'high') || 'medium',
+      peakDetectionSensitivity:
+        (get('performance.peakDetectionSensitivity', 'medium') as 'low' | 'medium' | 'high') ||
+        'medium',
       telemetryUpdateInterval: getNum('performance.telemetryUpdateInterval', 1000),
     },
   };
@@ -128,6 +127,8 @@ export function requiresRestart(updates: Array<{ key: string; value: string }>):
     'services.gpsdHost',
     'services.gpsdPort',
     'session.storageMode',
+    'performance.peakDetectionSensitivity',
+    'performance.telemetryUpdateInterval',
   ];
 
   return updates.some((update) => restartKeys.includes(update.key));

@@ -1,7 +1,9 @@
 import React, { useMemo } from 'react';
 
 import { useSelection } from '../../contexts/SelectionContext';
-import { formatDistance } from '../../utils/geo';
+import { useDistanceUnit } from '../../hooks/useDistanceUnit';
+import { useSettings } from '../../hooks/useSettings';
+import { formatDistanceFromKm } from '../../utils/distance';
 import { formatTimeSince, isStale } from '../../utils/time';
 
 import styles from './AircraftList.module.css';
@@ -35,6 +37,15 @@ export const AircraftList: React.FC = () => {
   const aircraft = useAircraft();
   const { sortedAircraft, sortKey, sortDirection, toggleSort } = useAircraftSorting(aircraft);
   const { selectedAircraftIcao, selectAircraft } = useSelection();
+  const distanceUnit = useDistanceUnit();
+  const { settings } = useSettings();
+
+  // Apply max aircraft limit from performance settings
+  const maxAircraftDisplayed = settings?.performance?.maxAircraftDisplayed ?? 200;
+  const displayedAircraft = useMemo(
+    () => sortedAircraft.slice(0, maxAircraftDisplayed),
+    [sortedAircraft, maxAircraftDisplayed],
+  );
 
   if (!aircraft.length) {
     return (
@@ -82,7 +93,7 @@ export const AircraftList: React.FC = () => {
           </tr>
         </thead>
         <tbody>
-          {sortedAircraft.map((ac) => {
+          {displayedAircraft.map((ac) => {
             const selected = ac.icao === selectedAircraftIcao;
             return (
               <tr
@@ -95,7 +106,11 @@ export const AircraftList: React.FC = () => {
                 onClick={() => selectAircraft(ac.icao)}
               >
                 <td>{ac.callsign}</td>
-                <td>{ac.distance !== undefined ? formatDistance(ac.distance) : '—'}</td>
+                <td>
+                  {ac.distance !== undefined
+                    ? formatDistanceFromKm(ac.distance, distanceUnit)
+                    : '—'}
+                </td>
                 <td>{ac.altitude.toLocaleString()} ft</td>
                 <td>{ac.speed} kts</td>
                 <td className={styles.lastSeen}>{formatTimeSince(ac.lastSeen)}</td>

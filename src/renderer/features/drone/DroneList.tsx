@@ -2,7 +2,8 @@ import React from 'react';
 
 import { useSelection } from '../../contexts/SelectionContext';
 import { useTelemetry } from '../../contexts/TelemetryContext';
-import { formatDistance } from '../../utils/geo';
+import { useDistanceUnit } from '../../hooks/useDistanceUnit';
+import { formatDistanceFromKm } from '../../utils/distance';
 import { formatTimeSince } from '../../utils/time';
 
 import styles from './DroneList.module.css';
@@ -29,6 +30,7 @@ export const DroneList: React.FC = () => {
   const drones = useDrones();
   const { sorted, sortKey, sortDirection, toggleSort } = useDroneSorting(drones);
   const { selectedDroneId, selectDrone } = useSelection();
+  const distanceUnit = useDistanceUnit();
 
   if (!ridAvailable) {
     return (
@@ -96,7 +98,9 @@ export const DroneList: React.FC = () => {
             >
               <td>{drone.droneId}</td>
               <td>{drone.manufacturer ?? '—'}</td>
-              <td>{drone.distance != null ? formatDistance(drone.distance) : '—'}</td>
+              <td>
+                {drone.distance != null ? formatDistanceFromKm(drone.distance, distanceUnit) : '—'}
+              </td>
               <td>{drone.droneAltitude ?? '—'}</td>
               <td>{formatTimeSince(drone.lastSeen)}</td>
             </tr>
