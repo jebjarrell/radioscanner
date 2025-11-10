@@ -3,6 +3,7 @@ import { WebSocketServer } from 'ws';
 import type { ServiceKey } from '../types/services.js';
 import { SERVICE_KEYS } from '../types/services.js';
 
+import { KismetRidClient, RemoteIdPayload } from './clients/kismetRid.js';
 import { MAX_AIRCRAFT } from './constants.js';
 import { Dump1090Client, Dump1090Snapshot } from './dump1090Client.js';
 import { GpsClient, GpsStatus } from './gpsClient.js';
@@ -34,8 +35,8 @@ export interface TelemetryFrame {
   aircraft: Dump1090Snapshot['aircraft'];
   drone: {
     ridAvailable: boolean;
+    detections: RemoteIdPayload[];
   };
-  drones?: Array<Record<string, unknown>>;
   signals: {
     rtlTcpConnected: boolean;
     gpsConnected: boolean;
@@ -62,6 +63,7 @@ export class HealthMonitor extends TypedEventEmitter<HealthEvents> {
   private readonly rtlTcp: RtlClient;
   private readonly dump1090: DumpClient;
   private readonly kismet: KismetLikeClient;
+  private readonly kismetRidClient: KismetRidClient;
   private readonly gps: GpsLikeClient;
   private readonly telemetryBatcher = new TelemetryBatcher<TelemetryRecord>((batch) =>
     this.flushTelemetryBatch(batch),
@@ -86,6 +88,7 @@ export class HealthMonitor extends TypedEventEmitter<HealthEvents> {
     this.rtlTcp = clients.rtlTcp;
     this.dump1090 = clients.dump1090;
     this.kismet = clients.kismet;
+    this.kismetRidClient = clients.kismetRidClient;
     this.gps = clients.gps;
     this.attachClientEvents();
   }
@@ -109,7 +112,7 @@ export class HealthMonitor extends TypedEventEmitter<HealthEvents> {
     this.telemetryBatcher.dispose();
   }
 
-  getSnapshot(): TelemetryFrame {
+  async getSnapshot(): Promise<TelemetryFrame> {
     return this.buildTelemetryFrame();
   }
 
@@ -220,11 +223,12 @@ export class HealthMonitor extends TypedEventEmitter<HealthEvents> {
       this.wsServer = new WebSocketServer({ port: this.wsPort });
 
       this.wsServer.on('connection', (socket) => {
-        try {
-          socket.send(JSON.stringify(this.buildTelemetryFrame()));
-        } catch {
-          // ignore initial send errors
-        }
+        // Send initial telemetry frame asynchronously
+        void this.buildTelemetryFrame()
+          .then((frame) => socket.send(JSON.stringify(frame)))
+          .catch(() => {
+            // ignore initial send errors
+          });
       });
 
       this.wsServer.on('error', (err) => this.emit('error', err as Error));
@@ -235,9 +239,33 @@ export class HealthMonitor extends TypedEventEmitter<HealthEvents> {
     }
 
     this.telemetryTimer = setInterval(() => {
-      const frame = this.buildTelemetryFrame();
-      const payload = JSON.stringify(frame);
+      // Build telemetry frame asynchronously
+      void this.buildTelemetryFrame().then((frame) => {
+        const payload = JSON.stringify(frame);
+        if (this.wsServer) {
+          this.wsServer.clients.forEach((client) => {
+            if (client.readyState === client.OPEN) {
+              client.send(payload);
+            }
+          });
+        }
+        this.emit('health', frame);
+        this.telemetryBatcher.enqueue({
+          timestamp: frame.health.timestamp,
+          aircraftCount: frame.aircraft.length,
+          droneAvailable: frame.drone.ridAvailable,
+          rtlConnected: frame.signals.rtlTcpConnected,
+          gpsConnected: frame.signals.gpsConnected,
+        });
+      });
+    }, TELEMETRY_INTERVAL_MS);
+  }
+
+  private emitHealth(): void {
+    // Build telemetry frame asynchronously
+    void this.buildTelemetryFrame().then((frame) => {
       if (this.wsServer) {
+        const payload = JSON.stringify(frame);
         this.wsServer.clients.forEach((client) => {
           if (client.readyState === client.OPEN) {
             client.send(payload);
@@ -245,30 +273,10 @@ export class HealthMonitor extends TypedEventEmitter<HealthEvents> {
         });
       }
       this.emit('health', frame);
-      this.telemetryBatcher.enqueue({
-        timestamp: frame.health.timestamp,
-        aircraftCount: frame.aircraft.length,
-        droneAvailable: frame.drone.ridAvailable,
-        rtlConnected: frame.signals.rtlTcpConnected,
-        gpsConnected: frame.signals.gpsConnected,
-      });
-    }, TELEMETRY_INTERVAL_MS);
+    });
   }
 
-  private emitHealth(): void {
-    const frame = this.buildTelemetryFrame();
-    if (this.wsServer) {
-      const payload = JSON.stringify(frame);
-      this.wsServer.clients.forEach((client) => {
-        if (client.readyState === client.OPEN) {
-          client.send(payload);
-        }
-      });
-    }
-    this.emit('health', frame);
-  }
-
-  private buildTelemetryFrame(): TelemetryFrame {
+  private async buildTelemetryFrame(): Promise<TelemetryFrame> {
     const rtlStatus = this.rtlTcp.getStatus();
     const rawDumpStatus = this.dump1090.getStatus();
     const kismetStatus = this.kismet.getStatus();
@@ -301,12 +309,16 @@ export class HealthMonitor extends TypedEventEmitter<HealthEvents> {
       this.lastDumpSnapshot?.aircraft ?? this.dump1090.getLastSnapshot()?.aircraft ?? [];
     const limitedAircraft = aircraft.slice(0, MAX_AIRCRAFT);
 
+    // Fetch drone detections from Kismet UAV API
+    const droneDetections = await this.kismetRidClient.fetchRemoteId();
+
     return {
       timestamp: new Date().toISOString(),
       health: healthSnapshot,
       aircraft: limitedAircraft,
       drone: {
         ridAvailable: kismetStatus.ridEnabled,
+        detections: droneDetections,
       },
       signals: {
         rtlTcpConnected: rtlStatus.connected,
@@ -336,12 +348,14 @@ function createRealClients(): {
   rtlTcp: RtlTcpClient;
   dump1090: Dump1090Client;
   kismet: KismetClient;
+  kismetRidClient: KismetRidClient;
   gps: GpsClient;
 } {
   return {
     rtlTcp: new RtlTcpClient(),
     dump1090: new Dump1090Client(),
     kismet: new KismetClient(),
+    kismetRidClient: new KismetRidClient(),
     gps: new GpsClient(),
   };
 }
@@ -350,12 +364,14 @@ function createMockClients(): {
   rtlTcp: MockRtlTcpClient;
   dump1090: MockDump1090Client;
   kismet: MockKismetClient;
+  kismetRidClient: KismetRidClient;
   gps: MockGpsClient;
 } {
   return {
     rtlTcp: new MockRtlTcpClient(),
     dump1090: new MockDump1090Client(),
     kismet: new MockKismetClient(),
+    kismetRidClient: new KismetRidClient(), // Use real client for both (returns empty array on error)
     gps: new MockGpsClient(),
   };
 }

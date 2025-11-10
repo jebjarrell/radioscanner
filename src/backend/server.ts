@@ -258,8 +258,19 @@ async function buildServer(): Promise<FastifyInstance> {
   });
 
   type TelemetryEnvelope = TelemetryFrame & { drones?: DroneSnapshot[] };
+  // Initialize with empty frame, will be populated after start
   let latestFrame: TelemetryEnvelope = {
-    ...healthMonitor.getSnapshot(),
+    timestamp: new Date().toISOString(),
+    health: {
+      rtlTcp: { connected: false },
+      dump1090: { healthy: false },
+      kismet: { available: false, ridEnabled: false },
+      gps: { connected: false },
+      timestamp: Date.now(),
+    },
+    aircraft: [],
+    drone: { ridAvailable: false, detections: [] },
+    signals: { rtlTcpConnected: false, gpsConnected: false },
     drones: createMockDrones(),
   };
   const clients = new Set<WebSocket>();
@@ -312,7 +323,7 @@ async function buildServer(): Promise<FastifyInstance> {
   });
 
   await healthMonitor.start();
-  const snapshot = healthMonitor.getSnapshot();
+  const snapshot = await healthMonitor.getSnapshot();
   latestFrame = { ...snapshot, drones: createMockDrones() };
   queueAircraftFromFrame(snapshot);
 
