@@ -1,6 +1,7 @@
 import { SignalDatabase } from '../storage/signalDb.js';
 import { TypedEventEmitter } from '../utils/typedEventEmitter.js';
 
+import { PeakDetector } from './peakDetector.js';
 import { PsdEngine, type SpectrumFrame } from './psdEngine.js';
 import { RtlTcpClient, type RtlTcpOptions } from './rtlTcpClient.js';
 
@@ -22,9 +23,20 @@ export class RfController extends TypedEventEmitter<RfControllerEvents> {
   private rtl: RtlTcpClient | null = null;
   private psd: PsdEngine | null = null;
   private current: ScanParams | null = null;
+  private readonly peakDetector: PeakDetector;
 
   constructor(private readonly signalDb: SignalDatabase) {
     super();
+    // Configure advanced peak detection
+    this.peakDetector = new PeakDetector({
+      minSnrDb: 6, // 6 dB above noise floor
+      minPower: -80, // Minimum -80 dBFS
+      minWidth: 1, // At least 1 bin wide
+      maxPeaks: 50, // Top 50 peaks
+      noiseMethod: 'percentile',
+      noisePercentile: 0.1, // 10th percentile
+      excludeDc: true, // Exclude DC bin
+    });
   }
 
   isRunning(): boolean {
@@ -86,22 +98,19 @@ export class RfController extends TypedEventEmitter<RfControllerEvents> {
     this.current = null;
   }
 
-  private pickPeaks(frame: SpectrumFrame): Array<{ frequency: number; power: number }> {
-    const peaks: Array<{ frequency: number; power: number }> = [];
+  private pickPeaks(
+    frame: SpectrumFrame,
+  ): Array<{ frequency: number; power: number; snr?: number }> {
     const { bins, binSizeHz, startHz } = frame;
-    for (let i = 1; i < bins.length - 1; i++) {
-      const power = bins[i];
-      if (power <= -30) {
-        continue;
-      }
-      if (power > bins[i - 1] && power > bins[i + 1]) {
-        peaks.push({
-          frequency: startHz + i * binSizeHz,
-          power,
-        });
-      }
-    }
-    peaks.sort((a, b) => b.power - a.power);
-    return peaks.slice(0, 10);
+
+    // Use advanced peak detector
+    const peaks = this.peakDetector.detectPeaks(bins, startHz, binSizeHz);
+
+    // Map to expected format (with optional SNR)
+    return peaks.map((peak) => ({
+      frequency: peak.frequency,
+      power: peak.power,
+      snr: peak.snr,
+    }));
   }
 }
