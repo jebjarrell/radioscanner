@@ -1,5 +1,5 @@
-import path from 'node:path';
 import { spawn, type ChildProcess } from 'node:child_process';
+import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 
@@ -35,6 +35,7 @@ const RETRYABLE_SERVICES = new Set<ServiceKey>(['rtlTcp', 'dump1090', 'kismet', 
 let backendProcess: ChildProcess | null = null;
 let backendStopping = false;
 let appQuitting = false;
+let quitHandling = false;
 
 function getBackendCwd(): string {
   if (!app.isPackaged) {
@@ -138,8 +139,107 @@ registerCleanup(async () => {
   await stopBackend();
 });
 
-app.on('before-quit', () => {
-  appQuitting = true;
+app.on('before-quit', (event) => {
+  if (appQuitting) {
+    return;
+  }
+  event.preventDefault();
+  if (quitHandling) {
+    return;
+  }
+  quitHandling = true;
+  void (async () => {
+    const window = BrowserWindow.getAllWindows()[0];
+    if (!window) {
+      appQuitting = true;
+      app.quit();
+      return;
+    }
+
+    let hasData = false;
+    try {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/stats`);
+      if (response.ok) {
+        const stats = (await response.json()) as {
+          aircraftCount?: number;
+          droneCount?: number;
+          signalCount?: number;
+        };
+        const { aircraftCount = 0, droneCount = 0, signalCount = 0 } = stats;
+        const total = aircraftCount + droneCount + signalCount;
+        hasData = total > 0;
+      }
+    } catch {
+      hasData = false;
+    }
+
+    if (!hasData) {
+      appQuitting = true;
+      app.quit();
+      quitHandling = false;
+      return;
+    }
+
+    const { response: choice } = await dialog.showMessageBox(window, {
+      type: 'question',
+      buttons: ['Save & Quit', 'Quit Without Saving', 'Cancel'],
+      defaultId: 0,
+      cancelId: 2,
+      title: 'Save Session Data?',
+      message: 'You have unsaved session data.',
+      detail: 'Do you want to save before closing?',
+    });
+
+    if (choice === 2) {
+      quitHandling = false;
+      return;
+    }
+
+    if (choice === 0) {
+      const { filePath } = await dialog.showSaveDialog(window, {
+        title: 'Save Session Data',
+        defaultPath: path.join(
+          app.getPath('documents'),
+          'Radio-Scanner-Sessions',
+          `session_${Date.now()}.sqlite`,
+        ),
+        filters: [{ name: 'SQLite Database', extensions: ['sqlite', 'db'] }],
+      });
+      if (!filePath) {
+        quitHandling = false;
+        return;
+      }
+
+      try {
+        const response = await fetch(`${BACKEND_BASE_URL}/api/session/save`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: filePath }),
+        });
+        if (!response.ok) {
+          throw new Error(`Save failed with status ${response.status}`);
+        }
+      } catch (err) {
+        const { response: followUp } = await dialog.showMessageBox(window, {
+          type: 'error',
+          buttons: ['Quit Anyway', 'Cancel'],
+          defaultId: 1,
+          cancelId: 1,
+          title: 'Save Failed',
+          message: 'Failed to save session data.',
+          detail: err instanceof Error ? err.message : 'Unknown error',
+        });
+        if (followUp === 1) {
+          quitHandling = false;
+          return;
+        }
+      }
+    }
+
+    appQuitting = true;
+    app.quit();
+    quitHandling = false;
+  })();
 });
 
 const createWindow = async () => {

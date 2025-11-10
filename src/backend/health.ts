@@ -35,6 +35,7 @@ export interface TelemetryFrame {
   drone: {
     ridAvailable: boolean;
   };
+  drones?: Array<Record<string, unknown>>;
   signals: {
     rtlTcpConnected: boolean;
     gpsConnected: boolean;

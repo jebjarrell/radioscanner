@@ -1,0 +1,35 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Setup (Dry Run)",
+      "type": "shell",
+      "command": "bash",
+      "args": ["./setup_v4.sh", "--dry-run"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Setup (Apply)",
+      "type": "shell",
+      "command": "bash",
+      "args": ["./setup_v4.sh"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Verify Services",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "doctor"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

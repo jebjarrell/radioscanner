@@ -1,12 +1,18 @@
 import React, { useState } from 'react';
 
-import { DashboardCounters } from './DashboardCounters';
+import { useTelemetry } from '../contexts/TelemetryContext';
 import { AircraftList } from '../features/aircraft/AircraftList';
+import { DroneList } from '../features/drone/DroneList';
+import { RfPanel } from '../features/rf/RfPanel';
+
+import { DashboardCounters } from './DashboardCounters';
 
 type Tab = 'dashboard' | 'aircraft' | 'drones' | 'rf';
 
 export const SidePanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('aircraft');
+  const { telemetry } = useTelemetry();
+  const ridAvailable = telemetry?.drone?.ridAvailable ?? true;
 
   return (
     <div className="side-panel">
@@ -29,8 +35,15 @@ export const SidePanel: React.FC = () => {
           type="button"
           className={`side-panel-tab ${activeTab === 'drones' ? 'active' : ''}`}
           onClick={() => setActiveTab('drones')}
+          disabled={!ridAvailable}
+          title={ridAvailable ? 'View detected drones' : 'Remote ID not available (Kismet offline)'}
         >
-          Drones
+          <span>Drones</span>
+          {!ridAvailable && (
+            <span className="side-panel-tab__badge" aria-hidden="true">
+              ⚠
+            </span>
+          )}
         </button>
         <button
           type="button"
@@ -43,8 +56,8 @@ export const SidePanel: React.FC = () => {
       <div className="side-panel-content">
         {activeTab === 'dashboard' && <DashboardCounters />}
         {activeTab === 'aircraft' && <AircraftList />}
-        {activeTab === 'drones' && <div className="side-panel-placeholder">Drone list (Phase 5)</div>}
-        {activeTab === 'rf' && <div className="side-panel-placeholder">RF controls (Phase 6)</div>}
+        {activeTab === 'drones' && <DroneList />}
+        {activeTab === 'rf' && <RfPanel />}
       </div>
     </div>
   );

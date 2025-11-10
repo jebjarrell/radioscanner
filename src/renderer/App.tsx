@@ -6,6 +6,7 @@ import { WaterfallView } from './components/WaterfallView';
 import { SelectionProvider } from './contexts/SelectionContext';
 import { TelemetryProvider } from './contexts/TelemetryContext';
 import { AircraftDetail } from './features/aircraft/AircraftDetail';
+import { DroneDetail } from './features/drone/DroneDetail';
 
 export const App: React.FC = () => (
   <TelemetryProvider>
@@ -15,6 +16,7 @@ export const App: React.FC = () => (
         <MainContent />
         <WaterfallView />
         <AircraftDetail />
+        <DroneDetail />
       </div>
     </SelectionProvider>
   </TelemetryProvider>

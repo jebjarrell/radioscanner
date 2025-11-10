@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import process from 'node:process';
 
 import cors from '@fastify/cors';
@@ -8,16 +10,14 @@ import type { WebSocket } from 'ws';
 import { z } from 'zod';
 
 import { HealthMonitor, TelemetryFrame } from './health.js';
+import type { SpectrumFrame } from './sdr/psdEngine.js';
+import { RfController } from './sdr/rfController.js';
 import { AircraftDatabase } from './storage/aircraftDb.js';
 import { sessionDb, settingsDb as settingsConnection } from './storage/db.js';
 import { SettingsDatabase } from './storage/settingsDb.js';
+import { SignalDatabase } from './storage/signalDb.js';
 import { TelemetryBatcher } from './storage/telemetryBatcher.js';
-import {
-  ICAO,
-  clamp,
-  validateAircraft,
-  type AircraftRecord,
-} from './storage/validation.js';
+import { ICAO, clamp, validateAircraft, type AircraftRecord } from './storage/validation.js';
 
 const BACKEND_HOST = '127.0.0.1';
 const DEFAULT_PORT = 3000;
@@ -25,10 +25,62 @@ const BROADCAST_MS = 1_000;
 const MAX_ALTITUDE_FT = 60_000;
 const MAX_SPEED_KTS = 1_000;
 
+type DroneSnapshot = {
+  droneId: string;
+  manufacturer: string | null;
+  model: string | null;
+  droneLat: number | null;
+  droneLon: number | null;
+  droneAltitude: number | null;
+  operatorLat: number | null;
+  operatorLon: number | null;
+  speed: number | null;
+  heading: number | null;
+  lastSeen: number;
+  uaType?: string | null;
+};
+
+type RfSpectrumPayload = SpectrumFrame & {
+  peaks: Array<{ frequency: number; power: number }>;
+};
+
+const MOCK_DRONES: DroneSnapshot[] = [
+  {
+    droneId: 'DJI-AIR2S-12345',
+    manufacturer: 'DJI',
+    model: 'Air 2S',
+    droneLat: 40.735,
+    droneLon: -73.936,
+    droneAltitude: 50,
+    operatorLat: 40.7305,
+    operatorLon: -73.935,
+    speed: 5.5,
+    heading: 180,
+    lastSeen: Date.now(),
+    uaType: 'multirotor',
+  },
+  {
+    droneId: 'AUTEL-EVO2-67890',
+    manufacturer: 'Autel',
+    model: 'EVO II',
+    droneLat: 40.738,
+    droneLon: -73.932,
+    droneAltitude: 75,
+    operatorLat: null,
+    operatorLon: null,
+    speed: 8.2,
+    heading: 90,
+    lastSeen: Date.now(),
+    uaType: 'multirotor',
+  },
+];
+
 const ScanStartSchema = z.object({
-  band: z.string().min(1),
+  band: z.string().min(1).optional(),
   centerHz: z.number().int().positive().optional(),
   sampleRate: z.number().int().positive().optional(),
+  gain: z.union([z.literal('auto'), z.number().int().min(0)]).optional(),
+  spanHz: z.number().int().positive().optional(),
 });
 
 const RetrySchema = z.object({
@@ -44,6 +96,11 @@ function parseBooleanEnv(value: string | undefined): boolean {
   if (!value) return false;
   const normalized = value.trim().toLowerCase();
   return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
+}
+
+function createMockDrones(): DroneSnapshot[] {
+  const now = Date.now();
+  return MOCK_DRONES.map((drone) => ({ ...drone, lastSeen: now }));
 }
 
 function normalizeHeading(value: number): number {
@@ -110,7 +167,10 @@ function extractNumber(source: unknown, fallback = 0): number {
   return fallback;
 }
 
-function toAircraftRecord(entry: TelemetryFrame['aircraft'][number], timestamp: number): AircraftRecord | null {
+function toAircraftRecord(
+  entry: TelemetryFrame['aircraft'][number],
+  timestamp: number,
+): AircraftRecord | null {
   const icao = typeof entry.hex === 'string' ? entry.hex.trim().toUpperCase() : '';
   if (!icao || !ICAO.test(icao)) {
     return null;
@@ -194,22 +254,33 @@ async function buildServer(): Promise<FastifyInstance> {
     disableWebSocket: true,
   });
 
-  let latestFrame: TelemetryFrame = healthMonitor.getSnapshot();
+  type TelemetryEnvelope = TelemetryFrame & { drones?: DroneSnapshot[] };
+  let latestFrame: TelemetryEnvelope = {
+    ...healthMonitor.getSnapshot(),
+    drones: createMockDrones(),
+  };
   const clients = new Set<WebSocket>();
   let broadcastTimer: NodeJS.Timeout | null = null;
   let shuttingDown = false;
   let lastProcessedTimestamp = 0;
+  let latestRfFrame: RfSpectrumPayload | null = null;
 
   const aircraftDb = new AircraftDatabase(sessionDb);
+  const signalDb = new SignalDatabase(sessionDb);
   const settingsDb = new SettingsDatabase(settingsConnection);
-  const aircraftBatcher = new TelemetryBatcher<AircraftRecord>((batch) => {
-    const valid = batch
-      .map((record) => validateAircraft(record))
-      .filter((record): record is AircraftRecord => record !== null);
-    if (valid.length) {
-      aircraftDb.insertBatch(valid);
-    }
-  }, 100, 5_000);
+  const rfController = new RfController(signalDb);
+  const aircraftBatcher = new TelemetryBatcher<AircraftRecord>(
+    (batch) => {
+      const valid = batch
+        .map((record) => validateAircraft(record))
+        .filter((record): record is AircraftRecord => record !== null);
+      if (valid.length) {
+        aircraftDb.insertBatch(valid);
+      }
+    },
+    100,
+    5_000,
+  );
 
   const queueAircraftFromFrame = (frame: TelemetryFrame) => {
     const frameTimestamp = frame.health?.timestamp ?? Date.now();
@@ -227,7 +298,7 @@ async function buildServer(): Promise<FastifyInstance> {
   };
 
   healthMonitor.on('health', (frame) => {
-    latestFrame = frame;
+    latestFrame = { ...frame, drones: createMockDrones() };
     queueAircraftFromFrame(frame);
   });
 
@@ -238,11 +309,11 @@ async function buildServer(): Promise<FastifyInstance> {
   });
 
   await healthMonitor.start();
-  latestFrame = healthMonitor.getSnapshot();
-  queueAircraftFromFrame(latestFrame);
+  const snapshot = healthMonitor.getSnapshot();
+  latestFrame = { ...snapshot, drones: createMockDrones() };
+  queueAircraftFromFrame(snapshot);
 
-  const broadcast = () => {
-    const payload = JSON.stringify(latestFrame);
+  const sendToClients = (payload: string) => {
     for (const client of clients) {
       if (client.readyState !== client.OPEN) {
         clients.delete(client);
@@ -261,10 +332,40 @@ async function buildServer(): Promise<FastifyInstance> {
     }
   };
 
+  const broadcast = () => {
+    const payload = JSON.stringify({ ...latestFrame, drones: createMockDrones() });
+    sendToClients(payload);
+  };
+
+  const broadcastRfFrame = (frame: RfSpectrumPayload) => {
+    const payload = JSON.stringify({ type: 'rf_spectrum', payload: frame });
+    sendToClients(payload);
+  };
+
+  rfController.on('spectrum', (frame) => {
+    latestRfFrame = frame;
+    broadcastRfFrame(frame);
+  });
+
+  rfController.on('error', (err) => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('[backend][rf-controller]', err);
+    }
+  });
+
+  rfController.on('disconnect', () => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[backend][rf-controller] rtl_tcp disconnected');
+    }
+  });
+
   server.get('/ws', { websocket: true }, (socket: WebSocket) => {
     clients.add(socket);
     try {
-      socket.send(JSON.stringify(latestFrame));
+      socket.send(JSON.stringify({ ...latestFrame, drones: createMockDrones() }));
+      if (latestRfFrame) {
+        socket.send(JSON.stringify({ type: 'rf_spectrum', payload: latestRfFrame }));
+      }
     } catch {
       clients.delete(socket);
       socket.close();
@@ -296,15 +397,64 @@ async function buildServer(): Promise<FastifyInstance> {
   });
 
   server.get('/api/drones', async (_request, reply) => {
-    reply.send({ drones: [] });
+    reply.send({ drones: createMockDrones() });
+  });
+  server.get('/api/export/drone/:droneId', async (request, reply) => {
+    const { droneId } = request.params as { droneId: string };
+    const drones = createMockDrones();
+    const drone = drones.find((entry) => entry.droneId === droneId);
+    const header =
+      'DroneId,Manufacturer,Model,DroneLat,DroneLon,DroneAltitude,OperatorLat,OperatorLon,Speed,Heading,LastSeen\n';
+    const row = drone
+      ? `${drone.droneId},${drone.manufacturer ?? ''},${drone.model ?? ''},${drone.droneLat ?? ''},${drone.droneLon ?? ''},${drone.droneAltitude ?? ''},${drone.operatorLat ?? ''},${drone.operatorLon ?? ''},${drone.speed ?? ''},${drone.heading ?? ''},${new Date(drone.lastSeen).toISOString()}\n`
+      : '';
+    const csv = header + row;
+    reply.header('Content-Type', 'text/csv');
+    reply.header(
+      'Content-Disposition',
+      `attachment; filename="drone_${encodeURIComponent(droneId)}_${Date.now()}.csv"`,
+    );
+    return csv;
   });
 
   server.get('/api/signals', async (_request, reply) => {
-    reply.send({ signals: [] });
+    reply.send({ signals: signalDb.getRecent(200) });
+  });
+
+  server.post('/api/session/save', async (request, reply) => {
+    const { path: targetPath } = (request.body ?? {}) as { path?: string };
+    if (!targetPath) {
+      reply.code(400).send({ error: 'Missing path' });
+      return;
+    }
+
+    try {
+      try {
+        aircraftBatcher.flush();
+      } catch (err) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('[session/save] failed to flush aircraft batcher', err);
+        }
+      }
+
+      const resolvedPath = path.resolve(targetPath);
+      fs.mkdirSync(path.dirname(resolvedPath), { recursive: true });
+
+      await sessionDb.backup(resolvedPath);
+
+      reply.send({ success: true, path: resolvedPath });
+    } catch (err) {
+      console.error('[session/save] backup failed', err);
+      reply
+        .code(500)
+        .send({ success: false, error: err instanceof Error ? err.message : 'Unknown error' });
+    }
   });
 
   server.get('/api/stats', async () => ({
     aircraftCount: aircraftDb.getCount(),
+    droneCount: latestFrame.drones?.length ?? 0,
+    signalCount: signalDb.getCount(),
   }));
 
   server.get('/api/settings', async () => settingsDb.getAll());
@@ -320,8 +470,18 @@ async function buildServer(): Promise<FastifyInstance> {
     return { success: true };
   });
 
+  server.post('/api/settings/session-storage', async (request, reply) => {
+    const body = request.body as { mode?: 'memory' | 'disk' };
+    if (body?.mode !== 'memory' && body?.mode !== 'disk') {
+      reply.code(400).send({ success: false, error: 'Invalid mode' });
+      return;
+    }
+    settingsDb.set('session_storage_mode', body.mode);
+    reply.send({ success: true, message: 'Will apply on next restart.' });
+  });
+
   server.post('/api/scan/start', async (request, reply) => {
-    const parseResult = ScanStartSchema.safeParse(request.body);
+    const parseResult = ScanStartSchema.safeParse(request.body ?? {});
     if (!parseResult.success) {
       reply.code(400).send({
         success: false,
@@ -330,31 +490,47 @@ async function buildServer(): Promise<FastifyInstance> {
       });
       return;
     }
-    reply.send({
-      success: true,
-      message: 'SDR scanning will be implemented in Phase 6',
-    });
+    try {
+      await rfController.start(parseResult.data);
+      reply.send({ success: true, message: 'RF scanning started' });
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      reply.code(500).send({ success: false, message: error.message });
+    }
   });
 
   server.post('/api/scan/stop', async (_request, reply) => {
+    await rfController.stop();
+    latestRfFrame = null;
     reply.send({ success: true });
   });
 
   server.get('/api/export/csv', async (request, reply) => {
-    const query = request.query as { table?: string; startTime?: string; endTime?: string } | undefined;
-    if (!query || query.table !== 'aircraft') {
-      reply.code(400).send({ error: 'Only aircraft CSV supported in Phase 3' });
+    const query = request.query as
+      | { table?: string; startTime?: string; endTime?: string }
+      | undefined;
+    if (!query?.table) {
+      reply.code(400).send({ error: 'table query parameter required' });
       return;
     }
     const start = query.startTime ? Number.parseInt(query.startTime, 10) : undefined;
     const end = query.endTime ? Number.parseInt(query.endTime, 10) : undefined;
-    const csv = aircraftDb.exportToCsv(
-      Number.isFinite(start ?? NaN) ? start : undefined,
-      Number.isFinite(end ?? NaN) ? end : undefined,
-    );
-    reply.header('Content-Type', 'text/csv');
-    reply.header('Content-Disposition', `attachment; filename="aircraft_${Date.now()}.csv"`);
-    return csv;
+    const normalizedStart = Number.isFinite(start ?? NaN) ? start : undefined;
+    const normalizedEnd = Number.isFinite(end ?? NaN) ? end : undefined;
+
+    if (query.table === 'aircraft') {
+      const csv = aircraftDb.exportToCsv(normalizedStart, normalizedEnd);
+      reply.header('Content-Type', 'text/csv');
+      reply.header('Content-Disposition', `attachment; filename="aircraft_${Date.now()}.csv"`);
+      return csv;
+    }
+    if (query.table === 'signals') {
+      const csv = signalDb.exportToCsv(normalizedStart, normalizedEnd);
+      reply.header('Content-Type', 'text/csv');
+      reply.header('Content-Disposition', `attachment; filename="signals_${Date.now()}.csv"`);
+      return csv;
+    }
+    reply.code(400).send({ error: 'Unsupported table' });
   });
 
   server.post('/api/service/retry', async (request, reply) => {
@@ -401,6 +577,15 @@ async function buildServer(): Promise<FastifyInstance> {
       await server.close();
     } catch {
       // ignore close errors
+    }
+
+    try {
+      await rfController.stop();
+      latestRfFrame = null;
+    } catch (err) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('[backend] rf controller shutdown error', err);
+      }
     }
 
     try {

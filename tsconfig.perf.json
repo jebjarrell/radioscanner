@@ -1,0 +1,22 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "emitDeclarationOnly": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "outDir": "./.perf-tmp",
+    "rootDir": "./src"
+  },
+  "include": [
+    "src/backend/**/*.ts",
+    "src/backend/**/*.mts",
+    "src/backend/**/*.cts",
+    "src/backend/**/*.tsx",
+    "src/backend/**/*.js",
+    "src/backend/**/*.mjs",
+    "src/types/**/*.d.ts"
+  ],
+  "exclude": ["dist", "dist-electron", ".perf-tmp"]
+}

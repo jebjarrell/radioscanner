@@ -6,6 +6,7 @@ import {
   SERVICE_SUGGESTIONS,
   type ServiceKey,
 } from '../../types/services.js';
+import type { Drone } from '../features/drone/types.js';
 import type { TelemetryAircraft, TelemetryFrame, TelemetryHealthSnapshot } from '../types.js';
 import { WaterfallCanvas } from '../waterfall/WaterfallCanvas.js';
 
@@ -97,6 +98,7 @@ interface MatrixRow {
 interface MapPanelOptions {
   version: string;
   onAircraftClick?: (icao: string) => void;
+  onDroneClick?: (droneId: string) => void;
 }
 
 export class MapPanel {
@@ -131,6 +133,7 @@ export class MapPanel {
 
   private readonly retryResetTimers = new Map<ServiceKey, number>();
   private readonly onAircraftClick?: (icao: string) => void;
+  private readonly onDroneClick?: (droneId: string) => void;
 
   private latestFrame: TelemetryFrame | null = null;
   private performanceMode = false;
@@ -142,13 +145,18 @@ export class MapPanel {
   };
 
   private aircraftMarkers = new Map<string, Marker>();
-  private droneMarker: Marker | null = null;
+  private droneMarkers = new Map<string, Marker>();
+  private operatorMarkers = new Map<string, Marker>();
+  private droneLines = new Map<string, string>();
   private signalMarkers: { rtl: Marker; gps: Marker } | null = null;
+  private currentDrones: Drone[] = [];
+  private mapReady = false;
 
   constructor(root: HTMLElement, options: MapPanelOptions) {
     this.root = root;
     this.root.classList.add('app-shell');
     this.onAircraftClick = options.onAircraftClick;
+    this.onDroneClick = options.onDroneClick;
 
     this.panel = document.createElement('div');
     this.panel.className = 'map-panel';
@@ -215,6 +223,12 @@ export class MapPanel {
     this.waterfall = new WaterfallCanvas(waterfallCanvasEl, { maxRows: DEFAULT_WATERFALL_ROWS });
 
     this.map = this.createMap();
+    this.map.once('load', () => {
+      this.mapReady = true;
+      if (this.layerState.drones && this.currentDrones.length) {
+        this.syncDroneMarkers(this.currentDrones);
+      }
+    });
 
     this.overlays = {
       map: this.createLayerOverlay(this.mapContainer),
@@ -248,14 +262,16 @@ export class MapPanel {
     window.clearInterval(this.statusTimer);
     this.waterfall.terminate();
     this.clearAircraftMarkers();
-    this.removeDroneMarker();
+    this.clearDroneOverlays();
     this.removeSignalMarkers();
     this.retryResetTimers.forEach((timer) => window.clearTimeout(timer));
     this.retryResetTimers.clear();
     // Remove the panel we appended to the container to avoid duplicates on remount
     try {
       this.panel.remove();
-    } catch {}
+    } catch (err) {
+      void err;
+    }
     // Best-effort: if we added styling class to the host container, keep it but
     // React StrictMode will remount cleanly and we won't duplicate the DOM now.
   }
@@ -266,6 +282,18 @@ export class MapPanel {
     this.refreshStatusBar();
   }
 
+  public updateDrones(drones: Drone[]): void {
+    this.currentDrones = drones;
+    if (!this.layerState.drones) {
+      this.clearDroneOverlays();
+      return;
+    }
+    if (!this.mapReady) {
+      return;
+    }
+    this.syncDroneMarkers(drones);
+  }
+
   public setTelemetryConnected(connected: boolean): void {
     this.telemetryBadge.classList.toggle('map-panel__telemetry--connected', connected);
     this.telemetryBadge.classList.toggle('map-panel__telemetry--disconnected', !connected);
@@ -273,6 +301,8 @@ export class MapPanel {
 
     if (!connected) {
       this.latestFrame = null;
+      this.currentDrones = [];
+      this.clearDroneOverlays();
       this.refreshLayers();
       this.refreshStatusBar();
     }
@@ -542,9 +572,11 @@ export class MapPanel {
     }
 
     if (this.layerState.drones) {
-      this.renderDroneMarker();
+      if (this.mapReady) {
+        this.syncDroneMarkers(this.currentDrones);
+      }
     } else {
-      this.removeDroneMarker();
+      this.clearDroneOverlays();
     }
 
     if (this.layerState.signals) {
@@ -604,47 +636,173 @@ export class MapPanel {
     this.aircraftMarkers.clear();
   }
 
-  private renderDroneMarker(): void {
-    if (!this.latestFrame) {
-      this.removeDroneMarker();
+  private syncDroneMarkers(drones: Drone[]): void {
+    const active = new Set<string>();
+
+    drones.forEach((drone) => {
+      const id = drone.droneId;
+      if (!id || drone.droneLat == null || drone.droneLon == null) {
+        this.removeDroneOverlay(id);
+        return;
+      }
+
+      active.add(id);
+      let marker = this.droneMarkers.get(id);
+      const position: [number, number] = [drone.droneLon, drone.droneLat];
+
+      if (!marker) {
+        const element = document.createElement('div');
+        element.className = 'drone-marker';
+        element.textContent = '🚁';
+        element.title = [drone.manufacturer, drone.model].filter(Boolean).join(' ') || id;
+        element.addEventListener('click', () => {
+          this.onDroneClick?.(id);
+        });
+        marker = new Marker({ element, anchor: 'bottom' }).setLngLat(position).addTo(this.map);
+        this.droneMarkers.set(id, marker);
+      } else {
+        marker.setLngLat(position);
+        marker.getElement().title =
+          [drone.manufacturer, drone.model].filter(Boolean).join(' ') || id;
+      }
+
+      if (drone.operatorLat != null && drone.operatorLon != null) {
+        this.upsertOperatorMarker(drone);
+        this.updateDroneLine(drone);
+      } else {
+        this.removeOperatorMarker(id);
+        this.removeDroneLine(id);
+      }
+    });
+
+    this.droneMarkers.forEach((_marker, id) => {
+      if (!active.has(id)) {
+        this.removeDroneOverlay(id);
+      }
+    });
+  }
+
+  private clearDroneOverlays(): void {
+    this.droneMarkers.forEach((marker) => marker.remove());
+    this.droneMarkers.clear();
+    this.operatorMarkers.forEach((marker) => marker.remove());
+    this.operatorMarkers.clear();
+
+    if (this.mapReady) {
+      this.droneLines.forEach((layerId) => {
+        if (this.map.getLayer(layerId)) {
+          this.map.removeLayer(layerId);
+        }
+        if (this.map.getSource(layerId)) {
+          this.map.removeSource(layerId);
+        }
+      });
+    }
+    this.droneLines.clear();
+  }
+
+  private removeDroneOverlay(droneId: string): void {
+    const marker = this.droneMarkers.get(droneId);
+    if (marker) {
+      marker.remove();
+      this.droneMarkers.delete(droneId);
+    }
+    this.removeOperatorMarker(droneId);
+    this.removeDroneLine(droneId);
+  }
+
+  private upsertOperatorMarker(drone: Drone): void {
+    const id = drone.droneId;
+    if (drone.operatorLat == null || drone.operatorLon == null) {
+      this.removeOperatorMarker(id);
       return;
     }
-
-    const { drone, health } = this.latestFrame;
-    const coords = this.getGpsCoordinates();
-    if (!coords) {
-      this.removeDroneMarker();
-      return;
-    }
-
-    if (!this.droneMarker) {
+    const position: [number, number] = [drone.operatorLon, drone.operatorLat];
+    let marker = this.operatorMarkers.get(id);
+    if (!marker) {
       const element = document.createElement('div');
-      element.className = 'map-marker map-marker--drone';
-      this.droneMarker = new Marker({ element, anchor: 'bottom' })
-        .setLngLat(coords)
-        .addTo(this.map);
+      element.className = 'operator-marker';
+      element.textContent = '👤';
+      const badge = document.createElement('span');
+      badge.className = 'operator-marker__badge';
+      badge.textContent = 'β';
+      element.append(badge);
+      marker = new Marker({ element, anchor: 'bottom' }).setLngLat(position).addTo(this.map);
+      this.operatorMarkers.set(id, marker);
     } else {
-      this.droneMarker.setLngLat(coords);
-    }
-
-    const element = this.droneMarker.getElement();
-    element.classList.toggle('map-marker--active', drone.ridAvailable);
-    element.classList.toggle('map-marker--inactive', !drone.ridAvailable);
-    element.title = drone.ridAvailable ? 'Remote ID sources available' : 'Remote ID unavailable';
-
-    if (health.gps.lastFix) {
-      const { lat, lon, timestamp } = health.gps.lastFix;
-      element.dataset.lat = lat.toFixed(4);
-      element.dataset.lon = lon.toFixed(4);
-      element.dataset.timestamp = timestamp.toString();
+      marker.setLngLat(position);
     }
   }
 
-  private removeDroneMarker(): void {
-    if (this.droneMarker) {
-      this.droneMarker.remove();
-      this.droneMarker = null;
+  private removeOperatorMarker(droneId: string): void {
+    const marker = this.operatorMarkers.get(droneId);
+    if (marker) {
+      marker.remove();
+      this.operatorMarkers.delete(droneId);
     }
+  }
+
+  private updateDroneLine(drone: Drone): void {
+    if (!this.mapReady) {
+      return;
+    }
+    if (
+      drone.droneLon == null ||
+      drone.droneLat == null ||
+      drone.operatorLon == null ||
+      drone.operatorLat == null
+    ) {
+      this.removeDroneLine(drone.droneId);
+      return;
+    }
+    const layerId = `drone-line-${drone.droneId}`;
+    if (this.map.getLayer(layerId)) {
+      this.map.removeLayer(layerId);
+    }
+    if (this.map.getSource(layerId)) {
+      this.map.removeSource(layerId);
+    }
+    this.map.addSource(layerId, {
+      type: 'geojson',
+      data: {
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [drone.droneLon, drone.droneLat],
+            [drone.operatorLon, drone.operatorLat],
+          ],
+        },
+        properties: {},
+      },
+    });
+    this.map.addLayer({
+      id: layerId,
+      type: 'line',
+      source: layerId,
+      paint: {
+        'line-color': '#ff9800',
+        'line-width': 2,
+        'line-dasharray': [2, 2],
+      },
+    });
+    this.droneLines.set(drone.droneId, layerId);
+  }
+
+  private removeDroneLine(droneId: string): void {
+    const layerId = this.droneLines.get(droneId);
+    if (!layerId) {
+      return;
+    }
+    if (this.mapReady) {
+      if (this.map.getLayer(layerId)) {
+        this.map.removeLayer(layerId);
+      }
+      if (this.map.getSource(layerId)) {
+        this.map.removeSource(layerId);
+      }
+    }
+    this.droneLines.delete(droneId);
   }
 
   private renderSignalMarkers(): void {
@@ -985,17 +1143,5 @@ export class MapPanel {
     const altitude = typeof plane.alt_baro === 'number' ? `${plane.alt_baro} ft` : 'n/a';
     const seen = typeof plane.seen === 'number' ? `${plane.seen}s ago` : 'n/a';
     return `${label}\nAlt: ${altitude}\nSeen: ${seen}`;
-  }
-
-  private getGpsCoordinates(): [number, number] | null {
-    const frame = this.latestFrame;
-    if (!frame) {
-      return null;
-    }
-    const fix = frame.health.gps.lastFix;
-    if (fix && typeof fix.lat === 'number' && typeof fix.lon === 'number') {
-      return [fix.lon, fix.lat];
-    }
-    return MAP_DEFAULT_CENTER;
   }
 }

@@ -40,6 +40,22 @@ export interface TelemetryAircraft {
   [key: string]: unknown;
 }
 
+export interface TelemetryDrone {
+  droneId?: string;
+  manufacturer?: string | null;
+  model?: string | null;
+  droneLat?: number | null;
+  droneLon?: number | null;
+  droneAltitude?: number | null;
+  operatorLat?: number | null;
+  operatorLon?: number | null;
+  speed?: number | null;
+  heading?: number | null;
+  uaType?: string | null;
+  lastSeen?: number;
+  [key: string]: unknown;
+}
+
 export interface TelemetryFrame {
   timestamp: string;
   health: TelemetryHealthSnapshot;
@@ -47,6 +63,7 @@ export interface TelemetryFrame {
   drone: {
     ridAvailable: boolean;
   };
+  drones?: TelemetryDrone[];
   signals: {
     rtlTcpConnected: boolean;
     gpsConnected: boolean;
