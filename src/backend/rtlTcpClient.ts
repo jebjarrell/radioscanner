@@ -1,6 +1,7 @@
 import net from 'node:net';
 
 import { TypedEventEmitter } from './utils/typedEventEmitter.js';
+import { RTL_TCP_CONFIG } from '../config/index.js';
 
 export interface RtlTcpStatus {
   connected: boolean;
@@ -23,8 +24,8 @@ export class RtlTcpClient extends TypedEventEmitter<RtlTcpEventMap> {
   };
 
   constructor(
-    private readonly host = '127.0.0.1',
-    private readonly port = 1234,
+    private readonly host = RTL_TCP_CONFIG.host,
+    private readonly port = RTL_TCP_CONFIG.port,
   ) {
     super();
   }
