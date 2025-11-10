@@ -12,6 +12,7 @@ import { z } from 'zod';
 import { BACKEND_CONFIG } from '../config/index.js';
 
 import { HealthMonitor, TelemetryFrame } from './health.js';
+import { parseSettings, requiresRestart } from './services/settingsParser.js';
 import type { SpectrumFrame } from './sdr/psdEngine.js';
 import { RfController } from './sdr/rfController.js';
 import { AircraftDatabase } from './storage/aircraftDb.js';
@@ -418,8 +419,14 @@ async function buildServer(): Promise<FastifyInstance> {
     signalCount: signalDb.getCount(),
   }));
 
-  server.get('/api/settings', async () => settingsDb.getAll());
+  // Get all settings (structured response)
+  server.get('/api/settings', async () => {
+    const flat = settingsDb.getAll();
+    const structured = parseSettings(flat);
+    return structured;
+  });
 
+  // Update single setting
   server.post('/api/settings', async (request, reply) => {
     const parsed = SettingsSchema.safeParse(request.body);
     if (!parsed.success) {
@@ -428,16 +435,91 @@ async function buildServer(): Promise<FastifyInstance> {
     }
     const { key, value } = parsed.data;
     settingsDb.set(key, value ?? '');
-    return { success: true };
+    const needsRestart = requiresRestart([{ key, value: value ?? '' }]);
+    return { success: true, requiresRestart: needsRestart };
   });
 
+  // Bulk update settings
+  server.post('/api/settings/bulk', async (request, reply) => {
+    const body = request.body as { updates?: Array<{ key: string; value: string }> };
+    if (!body?.updates || !Array.isArray(body.updates)) {
+      reply.code(400).send({ success: false, error: 'Invalid updates array' });
+      return;
+    }
+
+    try {
+      settingsDb.setMany(body.updates);
+      const needsRestart = requiresRestart(body.updates);
+      return { success: true, requiresRestart: needsRestart };
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      reply.code(500).send({ success: false, error: error.message });
+    }
+  });
+
+  // Test service connection
+  server.post('/api/settings/test-connection', async (request, reply) => {
+    const body = request.body as {
+      service?: 'dump1090' | 'kismet' | 'rtlTcp' | 'gpsd';
+      host?: string;
+      port?: number;
+    };
+
+    if (!body?.service || !body?.host || !body?.port) {
+      reply.code(400).send({ success: false, error: 'Missing service, host, or port' });
+      return;
+    }
+
+    const startTime = Date.now();
+    try {
+      // Simple TCP connection test
+      const url = `http://${body.host}:${body.port}`;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+
+      const response = await fetch(url, {
+        method: 'HEAD',
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+      const latencyMs = Date.now() - startTime;
+
+      return {
+        success: response.ok,
+        latencyMs,
+        error: response.ok ? undefined : `HTTP ${response.status}`,
+      };
+    } catch (err) {
+      const latencyMs = Date.now() - startTime;
+      const error = err instanceof Error ? err.message : 'Connection failed';
+      return { success: false, latencyMs, error };
+    }
+  });
+
+  // Reset settings to defaults
+  server.post('/api/settings/reset', async (request, reply) => {
+    const body = request.body as {
+      section?: 'services' | 'preferences' | 'notifications' | 'performance';
+    };
+
+    try {
+      settingsDb.reset(body?.section);
+      return { success: true, requiresRestart: body?.section === 'services' };
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      reply.code(500).send({ success: false, error: error.message });
+    }
+  });
+
+  // Legacy endpoint for backward compatibility
   server.post('/api/settings/session-storage', async (request, reply) => {
     const body = request.body as { mode?: 'memory' | 'disk' };
     if (body?.mode !== 'memory' && body?.mode !== 'disk') {
       reply.code(400).send({ success: false, error: 'Invalid mode' });
       return;
     }
-    settingsDb.set('session_storage_mode', body.mode);
+    settingsDb.set('session.storageMode', body.mode);
     reply.send({ success: true, message: 'Will apply on next restart.' });
   });
 
