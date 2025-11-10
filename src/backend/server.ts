@@ -12,9 +12,9 @@ import { z } from 'zod';
 import { BACKEND_CONFIG } from '../config/index.js';
 
 import { HealthMonitor, TelemetryFrame } from './health.js';
-import { parseSettings, requiresRestart } from './services/settingsParser.js';
 import type { SpectrumFrame } from './sdr/psdEngine.js';
 import { RfController } from './sdr/rfController.js';
+import { parseSettings, requiresRestart } from './services/settingsParser.js';
 import { AircraftDatabase } from './storage/aircraftDb.js';
 import { sessionDb, settingsDb as settingsConnection } from './storage/db.js';
 import { SettingsDatabase } from './storage/settingsDb.js';

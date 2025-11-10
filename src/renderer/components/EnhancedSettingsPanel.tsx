@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
-import { useSettings } from '../hooks/useSettings';
 import { useToast } from '../contexts/ToastContext';
+import { useSettings } from '../hooks/useSettings';
 
 type TabId = 'services' | 'preferences' | 'notifications' | 'performance';
 
@@ -10,7 +10,10 @@ interface EnhancedSettingsPanelProps {
   onClose: () => void;
 }
 
-export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({ isOpen, onClose }) => {
+export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
+  isOpen,
+  onClose,
+}) => {
   const { settings, loading, updateBulk, testConnection, resetSettings } = useSettings();
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<TabId>('services');
@@ -70,7 +73,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({ is
     const confirmed = confirm(
       section
         ? `Reset ${section} settings to defaults?`
-        : 'Reset all settings to defaults? This cannot be undone.'
+        : 'Reset all settings to defaults? This cannot be undone.',
     );
     if (!confirmed) return;
 
@@ -156,7 +159,8 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({ is
             <div className="settings-section">
               <h3>Service URLs</h3>
               <p className="settings-description">
-                Configure connection endpoints for external services. Changes require application restart.
+                Configure connection endpoints for external services. Changes require application
+                restart.
               </p>
 
               <div className="settings-group">
@@ -200,11 +204,13 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({ is
                     type="button"
                     className="settings-btn settings-btn--test"
                     disabled={testingService === 'dump1090'}
-                    onClick={() => handleTestConnection(
-                      'dump1090',
-                      getValue('services.dump1090Host'),
-                      parseInt(getValue('services.dump1090Port'))
-                    )}
+                    onClick={() =>
+                      handleTestConnection(
+                        'dump1090',
+                        getValue('services.dump1090Host'),
+                        parseInt(getValue('services.dump1090Port')),
+                      )
+                    }
                   >
                     {testingService === 'dump1090' ? 'Testing...' : 'Test'}
                   </button>
@@ -232,11 +238,13 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({ is
                     type="button"
                     className="settings-btn settings-btn--test"
                     disabled={testingService === 'kismet'}
-                    onClick={() => handleTestConnection(
-                      'kismet',
-                      getValue('services.kismetHost'),
-                      parseInt(getValue('services.kismetPort'))
-                    )}
+                    onClick={() =>
+                      handleTestConnection(
+                        'kismet',
+                        getValue('services.kismetHost'),
+                        parseInt(getValue('services.kismetPort')),
+                      )
+                    }
                   >
                     {testingService === 'kismet' ? 'Testing...' : 'Test'}
                   </button>
@@ -264,11 +272,13 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({ is
                     type="button"
                     className="settings-btn settings-btn--test"
                     disabled={testingService === 'rtlTcp'}
-                    onClick={() => handleTestConnection(
-                      'rtlTcp',
-                      getValue('services.rtlTcpHost'),
-                      parseInt(getValue('services.rtlTcpPort'))
-                    )}
+                    onClick={() =>
+                      handleTestConnection(
+                        'rtlTcp',
+                        getValue('services.rtlTcpHost'),
+                        parseInt(getValue('services.rtlTcpPort')),
+                      )
+                    }
                   >
                     {testingService === 'rtlTcp' ? 'Testing...' : 'Test'}
                   </button>
@@ -296,11 +306,13 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({ is
                     type="button"
                     className="settings-btn settings-btn--test"
                     disabled={testingService === 'gpsd'}
-                    onClick={() => handleTestConnection(
-                      'gpsd',
-                      getValue('services.gpsdHost'),
-                      parseInt(getValue('services.gpsdPort'))
-                    )}
+                    onClick={() =>
+                      handleTestConnection(
+                        'gpsd',
+                        getValue('services.gpsdHost'),
+                        parseInt(getValue('services.gpsdPort')),
+                      )
+                    }
                   >
                     {testingService === 'gpsd' ? 'Testing...' : 'Test'}
                   </button>
@@ -408,7 +420,9 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({ is
                   <input
                     type="checkbox"
                     checked={getValue('notifications.enabled') === 'true'}
-                    onChange={(e) => handleChange('notifications.enabled', e.target.checked ? 'true' : 'false')}
+                    onChange={(e) =>
+                      handleChange('notifications.enabled', e.target.checked ? 'true' : 'false')
+                    }
                   />
                   <span>Enable Notifications</span>
                 </label>
@@ -419,7 +433,12 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({ is
                   <input
                     type="checkbox"
                     checked={getValue('notifications.droneDetected') === 'true'}
-                    onChange={(e) => handleChange('notifications.droneDetected', e.target.checked ? 'true' : 'false')}
+                    onChange={(e) =>
+                      handleChange(
+                        'notifications.droneDetected',
+                        e.target.checked ? 'true' : 'false',
+                      )
+                    }
                   />
                   <span>Drone Detected Alert</span>
                 </label>
@@ -430,7 +449,12 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({ is
                   <input
                     type="checkbox"
                     checked={getValue('notifications.aircraftProximity') === 'true'}
-                    onChange={(e) => handleChange('notifications.aircraftProximity', e.target.checked ? 'true' : 'false')}
+                    onChange={(e) =>
+                      handleChange(
+                        'notifications.aircraftProximity',
+                        e.target.checked ? 'true' : 'false',
+                      )
+                    }
                   />
                   <span>Aircraft Proximity Alert</span>
                 </label>
@@ -444,7 +468,9 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({ is
                   max="50"
                   className="settings-input"
                   value={getValue('notifications.aircraftProximityThresholdMiles')}
-                  onChange={(e) => handleChange('notifications.aircraftProximityThresholdMiles', e.target.value)}
+                  onChange={(e) =>
+                    handleChange('notifications.aircraftProximityThresholdMiles', e.target.value)
+                  }
                 />
               </div>
 
@@ -453,7 +479,9 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({ is
                   <input
                     type="checkbox"
                     checked={getValue('notifications.newSignal') === 'true'}
-                    onChange={(e) => handleChange('notifications.newSignal', e.target.checked ? 'true' : 'false')}
+                    onChange={(e) =>
+                      handleChange('notifications.newSignal', e.target.checked ? 'true' : 'false')
+                    }
                   />
                   <span>New Signal Detected Alert</span>
                 </label>
@@ -536,7 +564,9 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({ is
                 <select
                   className="settings-select"
                   value={getValue('performance.peakDetectionSensitivity')}
-                  onChange={(e) => handleChange('performance.peakDetectionSensitivity', e.target.value)}
+                  onChange={(e) =>
+                    handleChange('performance.peakDetectionSensitivity', e.target.value)
+                  }
                 >
                   <option value="low">Low (Fewer peaks, more strict)</option>
                   <option value="medium">Medium (Balanced)</option>
@@ -553,7 +583,9 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({ is
                   step="500"
                   className="settings-input"
                   value={getValue('performance.telemetryUpdateInterval')}
-                  onChange={(e) => handleChange('performance.telemetryUpdateInterval', e.target.value)}
+                  onChange={(e) =>
+                    handleChange('performance.telemetryUpdateInterval', e.target.value)
+                  }
                 />
                 <p className="settings-hint">Lower = more frequent updates, higher CPU usage</p>
               </div>
@@ -570,11 +602,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({ is
         </div>
 
         <div className="settings-footer">
-          {hasChanges && (
-            <div className="settings-warning">
-              ⚠ You have unsaved changes
-            </div>
-          )}
+          {hasChanges && <div className="settings-warning">⚠ You have unsaved changes</div>}
           <div className="settings-actions">
             <button
               type="button"
