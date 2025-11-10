@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 
 import { useTelemetry } from '../contexts/TelemetryContext';
 
+import { EnhancedSettingsPanel } from './EnhancedSettingsPanel';
 import { ExportDialog } from './ExportDialog';
 
 const STATUS_LABELS = [
@@ -26,6 +27,7 @@ const STATUS_LABELS = [
 export const TopBar: React.FC = () => {
   const { telemetry, connected } = useTelemetry();
   const [exportOpen, setExportOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
     <>
@@ -49,11 +51,15 @@ export const TopBar: React.FC = () => {
           </div>
         </div>
         <div className="top-bar-actions">
+          <button type="button" className="primary-button" onClick={() => setSettingsOpen(true)}>
+            ⚙ Settings
+          </button>
           <button type="button" className="primary-button" onClick={() => setExportOpen(true)}>
             💾 Export CSV
           </button>
         </div>
       </header>
+      <EnhancedSettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <ExportDialog isOpen={exportOpen} onClose={() => setExportOpen(false)} />
     </>
   );
