@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import ReactDOM from 'react-dom';
 
+import { BACKEND_URL } from '../../config/client.js';
 import styles from './ExportDialog.module.css';
 
 type ExportTable = 'aircraft' | 'drones' | 'signals';
@@ -62,7 +63,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose }) =
       if (end != null) {
         params.set('endTime', String(Math.floor(end)));
       }
-      const url = `http://127.0.0.1:3000/api/export/csv?${params.toString()}`;
+      const url = `${BACKEND_URL}/api/export/csv?${params.toString()}`;
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`Export failed with status ${response.status}`);

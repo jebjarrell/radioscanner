@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { connectWS } from '../services/wsReconnect';
+import { WEBSOCKET_URL } from '../../config/client.js';
 
 export type RfSpectrumFrame = {
   startHz: number;
@@ -30,7 +31,7 @@ export function useRfStream(): RfSpectrumFrame | null {
 
   useEffect(() => {
     const stop = connectWS(
-      'ws://127.0.0.1:3000/ws',
+      WEBSOCKET_URL,
       {
         onMessage: (event) => {
           try {

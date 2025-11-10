@@ -1,6 +1,7 @@
 import net from 'node:net';
 
 import { TypedEventEmitter } from '../utils/typedEventEmitter.js';
+import { RTL_TCP_CONFIG } from '../../config/index.js';
 
 export interface RtlTcpOptions {
   host?: string;
@@ -48,8 +49,8 @@ export class RtlTcpClient extends TypedEventEmitter<RtlTcpEvents> {
       return;
     }
 
-    const host = this.options.host ?? '127.0.0.1';
-    const port = this.options.port ?? 1234;
+    const host = this.options.host ?? RTL_TCP_CONFIG.host;
+    const port = this.options.port ?? RTL_TCP_CONFIG.port;
 
     this.socket = net.createConnection({ host, port });
 

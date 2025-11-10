@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 
 import { useTelemetry } from '../../contexts/TelemetryContext';
+import { BACKEND_URL } from '../../../config/client.js';
 
 import { RF_BANDS, type RfBandKey } from './bands';
 
@@ -32,7 +33,7 @@ export const RfControls: React.FC = () => {
     if (busy) return;
     setBusy(true);
     try {
-      const response = await fetch('http://127.0.0.1:3000/api/scan/start', {
+      const response = await fetch(`${BACKEND_URL}/api/scan/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -59,7 +60,7 @@ export const RfControls: React.FC = () => {
     if (busy) return;
     setBusy(true);
     try {
-      const response = await fetch('http://127.0.0.1:3000/api/scan/stop', { method: 'POST' });
+      const response = await fetch(`${BACKEND_URL}/api/scan/stop`, { method: 'POST' });
       if (!response.ok) {
         const text = await response.text();
         throw new Error(text || `stop failed with status ${response.status}`);
@@ -74,7 +75,7 @@ export const RfControls: React.FC = () => {
 
   const exportCsv = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:3000/api/export/csv?table=signals');
+      const res = await fetch(`${BACKEND_URL}/api/export/csv?table=signals`);
       if (!res.ok) {
         throw new Error(`export csv failed (${res.status})`);
       }

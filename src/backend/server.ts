@@ -18,8 +18,9 @@ import { SettingsDatabase } from './storage/settingsDb.js';
 import { SignalDatabase } from './storage/signalDb.js';
 import { TelemetryBatcher } from './storage/telemetryBatcher.js';
 import { ICAO, clamp, validateAircraft, type AircraftRecord } from './storage/validation.js';
+import { BACKEND_CONFIG } from '../config/index.js';
 
-const BACKEND_HOST = '127.0.0.1';
+const BACKEND_HOST = BACKEND_CONFIG.host;
 const DEFAULT_PORT = 3000;
 const BROADCAST_MS = 1_000;
 const MAX_ALTITUDE_FT = 60_000;
@@ -235,10 +236,12 @@ async function buildServer(): Promise<FastifyInstance> {
         cb(null, true);
         return;
       }
+      const allowedHosts = [BACKEND_HOST, 'localhost'];
       if (
-        origin.startsWith('http://127.0.0.1') ||
-        origin.startsWith('http://localhost') ||
-        origin.startsWith('https://127.0.0.1')
+        allowedHosts.some(
+          (host) =>
+            origin.startsWith(`http://${host}`) || origin.startsWith(`https://${host}`),
+        )
       ) {
         cb(null, true);
         return;

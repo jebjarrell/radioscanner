@@ -5,6 +5,7 @@ import { useAircraft } from '../features/aircraft/hooks/useAircraft';
 import { useDrones } from '../features/drone/hooks/useDrones';
 import { RF_BANDS, RF_BAND_OPTIONS, type RfBandKey } from '../features/rf/bands';
 import { useSignals } from '../hooks/useSignals';
+import { BACKEND_URL } from '../../config/client.js';
 
 import { SettingsPanel } from './SettingsPanel';
 
@@ -64,14 +65,14 @@ export const DashboardCounters: React.FC = () => {
     setScanBusy(true);
     try {
       if (scanning) {
-        const response = await fetch('http://127.0.0.1:3000/api/scan/stop', { method: 'POST' });
+        const response = await fetch(`${BACKEND_URL}/api/scan/stop`, { method: 'POST' });
         if (!response.ok) {
           throw new Error(`Stop failed: ${response.status}`);
         }
         setScanning(false);
       } else {
         const preset = RF_BANDS[activeBand];
-        const response = await fetch('http://127.0.0.1:3000/api/scan/start', {
+        const response = await fetch(`${BACKEND_URL}/api/scan/start`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

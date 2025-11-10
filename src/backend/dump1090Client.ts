@@ -12,8 +12,9 @@ import {
   SPEED_MIN_KTS,
 } from './constants.js';
 import { TypedEventEmitter } from './utils/typedEventEmitter.js';
+import { DUMP1090_CONFIG } from '../config/index.js';
 
-const DEFAULT_URL = 'http://127.0.0.1:8080/data/aircraft.json';
+const DEFAULT_URL = `${DUMP1090_CONFIG.baseUrl}/data/aircraft.json`;
 const POLL_INTERVAL_MS = 1_000;
 const FETCH_TIMEOUT_MS = 1_500;
 

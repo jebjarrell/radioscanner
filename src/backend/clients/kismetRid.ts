@@ -1,3 +1,5 @@
+import { KISMET_CONFIG } from '../../config/index.js';
+
 export type RemoteIdPayload = {
   droneId: string;
   manufacturer: string | null;
@@ -14,7 +16,7 @@ export type RemoteIdPayload = {
 };
 
 export class KismetRidClient {
-  constructor(private readonly baseUrl = 'http://127.0.0.1:2501') {}
+  constructor(private readonly baseUrl = KISMET_CONFIG.baseUrl) {}
 
   // Phase 5.5: implement Kismet polling + ASTM F3411 parsing.
   async fetchRemoteId(): Promise<RemoteIdPayload[]> {

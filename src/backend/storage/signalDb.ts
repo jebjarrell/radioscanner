@@ -1,6 +1,6 @@
-import BetterSqlite from 'better-sqlite3';
+import BetterSqlite3 from 'better-sqlite3';
 
-type SqliteDatabase = BetterSqlite.Database;
+type SqliteDatabase = BetterSqlite3.Database;
 
 type RecentSignalRow = {
   ts: number;
@@ -10,10 +10,10 @@ type RecentSignalRow = {
 };
 
 export class SignalDatabase {
-  private readonly insertStmt: BetterSqlite.Statement;
-  private readonly deleteOldStmt: BetterSqlite.Statement;
-  private readonly recentStmt: BetterSqlite.Statement;
-  private readonly exportStmt: BetterSqlite.Statement;
+  private readonly insertStmt: BetterSqlite3.Statement;
+  private readonly deleteOldStmt: BetterSqlite3.Statement;
+  private readonly recentStmt: BetterSqlite3.Statement;
+  private readonly exportStmt: BetterSqlite3.Statement;
 
   constructor(private readonly db: SqliteDatabase) {
     this.db.exec(`
@@ -52,34 +52,56 @@ export class SignalDatabase {
   }
 
   insertPeak(ts: number, frequencyMHz: number, dBfs: number, bandwidthHz: number): void {
-    this.insertStmt.run(ts, frequencyMHz, dBfs, bandwidthHz);
-    const ttl = Date.now() - 60 * 60 * 1000;
-    this.deleteOldStmt.run(ttl);
+    try {
+      this.insertStmt.run(ts, frequencyMHz, dBfs, bandwidthHz);
+      const ttl = Date.now() - 60 * 60 * 1000;
+      this.deleteOldStmt.run(ttl);
+    } catch (error) {
+      console.error('Failed to insert signal peak:', { ts, frequencyMHz, dBfs, bandwidthHz }, error);
+      // Non-critical: don't throw, allow scanning to continue
+    }
   }
 
   getRecent(limit = 200): RecentSignalRow[] {
-    return this.recentStmt.all(limit) as RecentSignalRow[];
+    try {
+      return this.recentStmt.all(limit) as RecentSignalRow[];
+    } catch (error) {
+      console.error('Failed to fetch recent signals:', { limit }, error);
+      return [];
+    }
   }
 
   getCount(): number {
-    const row = this.db.prepare(`SELECT COUNT(*) as count FROM signals`).get() as
-      | { count: number }
-      | undefined;
-    return row?.count ?? 0;
+    try {
+      const row = this.db.prepare(`SELECT COUNT(*) as count FROM signals`).get() as
+        | { count: number }
+        | undefined;
+      return row?.count ?? 0;
+    } catch (error) {
+      console.error('Failed to get signal count:', error);
+      return 0;
+    }
   }
 
   exportToCsv(start?: number, end?: number): string {
-    const rows = this.exportStmt.all(
-      start ?? null,
-      start ?? null,
-      end ?? null,
-      end ?? null,
-    ) as RecentSignalRow[];
-    const header = 'TimestampISO,FrequencyMHz,SignalStrength_dBFS,Bandwidth_Hz\n';
-    const lines = rows.map(
-      (row) =>
-        `${new Date(row.ts).toISOString()},${row.frequency},${row.signalStrength},${row.bandwidth}`,
-    );
-    return header + lines.join('\n');
+    try {
+      const rows = this.exportStmt.all(
+        start ?? null,
+        start ?? null,
+        end ?? null,
+        end ?? null,
+      ) as RecentSignalRow[];
+      const header = 'TimestampISO,FrequencyMHz,SignalStrength_dBFS,Bandwidth_Hz\n';
+      const lines = rows.map(
+        (row) =>
+          `${new Date(row.ts).toISOString()},${row.frequency},${row.signalStrength},${row.bandwidth}`,
+      );
+      return header + lines.join('\n');
+    } catch (error) {
+      console.error('Failed to export signals to CSV:', error);
+      throw new Error(
+        `Signal export failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
   }
 }

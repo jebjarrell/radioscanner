@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import BetterSqlite3 from 'better-sqlite3';
 
 import type { AircraftRecord } from './validation.js';
 
@@ -16,9 +16,9 @@ const csvEscape = (value: unknown): string => {
 };
 
 export class AircraftDatabase {
-  private readonly insertStmt: Database.Statement<AircraftRecord>;
+  private readonly insertStmt: BetterSqlite3.Statement<AircraftRecord>;
 
-  constructor(private readonly db: Database.Database) {
+  constructor(private readonly db: BetterSqlite3.Database) {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS aircraft (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -57,66 +57,84 @@ export class AircraftDatabase {
     if (!records.length) {
       return;
     }
-    const tx = this.db.transaction((rows: AircraftRecord[]) => {
-      for (const record of rows) {
-        this.insertStmt.run(record);
-      }
-      this.db.exec(`
-        DELETE FROM aircraft
-        WHERE id NOT IN (
-          SELECT id FROM aircraft
-          ORDER BY last_seen DESC
-          LIMIT ${MAX_RECORDS}
-        )
-      `);
-    });
-    tx(records);
+    try {
+      const tx = this.db.transaction((rows: AircraftRecord[]) => {
+        for (const record of rows) {
+          this.insertStmt.run(record);
+        }
+        this.db.exec(`
+          DELETE FROM aircraft
+          WHERE id NOT IN (
+            SELECT id FROM aircraft
+            ORDER BY last_seen DESC
+            LIMIT ${MAX_RECORDS}
+          )
+        `);
+      });
+      tx(records);
+    } catch (error) {
+      console.error('Failed to insert aircraft batch:', { count: records.length }, error);
+      // Non-critical: don't throw, allow telemetry to continue
+    }
   }
 
   getCount(): number {
-    const row = this.db.prepare(`SELECT COUNT(*) as count FROM aircraft`).get() as { count: number };
-    return row?.count ?? 0;
+    try {
+      const row = this.db.prepare(`SELECT COUNT(*) as count FROM aircraft`).get() as {
+        count: number;
+      };
+      return row?.count ?? 0;
+    } catch (error) {
+      console.error('Failed to get aircraft count:', error);
+      return 0;
+    }
   }
 
   exportToCsv(start?: number, end?: number): string {
-    const rows = this.db
-      .prepare(
-        `
-      SELECT icao, callsign, altitude, speed, heading, lat, lon, last_seen
-      FROM aircraft
-      WHERE (? IS NULL OR last_seen >= ?)
-        AND (? IS NULL OR last_seen <= ?)
-      ORDER BY last_seen DESC
-    `,
-      )
-      .all(start ?? null, start ?? null, end ?? null, end ?? null) as Array<{
-      icao: string;
-      callsign: string | null;
-      altitude: number | null;
-      speed: number | null;
-      heading: number | null;
-      lat: number | null;
-      lon: number | null;
-      last_seen: number;
-    }>;
+    try {
+      const rows = this.db
+        .prepare(
+          `
+        SELECT icao, callsign, altitude, speed, heading, lat, lon, last_seen
+        FROM aircraft
+        WHERE (? IS NULL OR last_seen >= ?)
+          AND (? IS NULL OR last_seen <= ?)
+        ORDER BY last_seen DESC
+      `,
+        )
+        .all(start ?? null, start ?? null, end ?? null, end ?? null) as Array<{
+        icao: string;
+        callsign: string | null;
+        altitude: number | null;
+        speed: number | null;
+        heading: number | null;
+        lat: number | null;
+        lon: number | null;
+        last_seen: number;
+      }>;
 
-    const header =
-      'ICAO,Callsign,Altitude,Speed,Heading,Latitude,Longitude,LastSeen\n';
-    const body = rows
-      .map((row) =>
-        [
-          csvEscape(row.icao),
-          csvEscape(row.callsign),
-          csvEscape(row.altitude),
-          csvEscape(row.speed),
-          csvEscape(row.heading),
-          csvEscape(row.lat),
-          csvEscape(row.lon),
-          csvEscape(new Date(row.last_seen).toISOString()),
-        ].join(','),
-      )
-      .join('\n');
+      const header = 'ICAO,Callsign,Altitude,Speed,Heading,Latitude,Longitude,LastSeen\n';
+      const body = rows
+        .map((row) =>
+          [
+            csvEscape(row.icao),
+            csvEscape(row.callsign),
+            csvEscape(row.altitude),
+            csvEscape(row.speed),
+            csvEscape(row.heading),
+            csvEscape(row.lat),
+            csvEscape(row.lon),
+            csvEscape(new Date(row.last_seen).toISOString()),
+          ].join(','),
+        )
+        .join('\n');
 
-    return `${header}${body}${body ? '\n' : ''}`;
+      return `${header}${body}${body ? '\n' : ''}`;
+    } catch (error) {
+      console.error('Failed to export aircraft to CSV:', error);
+      throw new Error(
+        `Aircraft export failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
   }
 }

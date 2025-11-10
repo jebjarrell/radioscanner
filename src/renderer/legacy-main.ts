@@ -5,7 +5,9 @@ import { MapPanel } from './map/MapPanel.js';
 import { connectWS } from './services/wsReconnect.js';
 import type { TelemetryFrame } from './types.js';
 
-const TELEMETRY_URL = 'ws://127.0.0.1:3000/ws';
+import { WEBSOCKET_URL } from '../config/client.js';
+
+const TELEMETRY_URL = WEBSOCKET_URL;
 
 const root = document.querySelector<HTMLDivElement>('#app');
 

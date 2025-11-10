@@ -3,6 +3,7 @@ import React from 'react';
 import { useSelection } from '../../contexts/SelectionContext';
 import { formatDistance } from '../../utils/geo';
 import { formatTimeSince } from '../../utils/time';
+import { BACKEND_URL } from '../../../config/client.js';
 
 import styles from './DroneDetail.module.css';
 import { useDrones } from './hooks/useDrones';
@@ -35,7 +36,7 @@ export const DroneDetail: React.FC = () => {
   const handleExport = async () => {
     try {
       const response = await fetch(
-        `http://127.0.0.1:3000/api/export/drone/${encodeURIComponent(drone.droneId)}`,
+        `${BACKEND_URL}/api/export/drone/${encodeURIComponent(drone.droneId)}`,
       );
       if (!response.ok) {
         throw new Error(`Unexpected status ${response.status}`);

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 
+import { BACKEND_URL } from '../../config/client.js';
+
 export interface SignalSample {
   ts: number;
   frequency: number;
@@ -15,7 +17,7 @@ export const useSignals = (): SignalSample[] => {
 
     const load = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:3000/api/signals');
+        const response = await fetch(`${BACKEND_URL}/api/signals`);
         if (!response.ok) {
           return;
         }

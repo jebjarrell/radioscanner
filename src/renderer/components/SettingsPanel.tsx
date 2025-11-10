@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
+import { BACKEND_URL } from '../../config/client.js';
+
 const MODES: Array<{ value: 'memory' | 'disk'; label: string }> = [
   { value: 'memory', label: 'In-Memory (default)' },
   { value: 'disk', label: 'Disk-Backed (restart required)' },
@@ -14,7 +16,7 @@ export const SettingsPanel: React.FC = () => {
     let cancelled = false;
     const load = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:3000/api/settings');
+        const response = await fetch(`${BACKEND_URL}/api/settings`);
         if (!response.ok) {
           return;
         }
@@ -39,7 +41,7 @@ export const SettingsPanel: React.FC = () => {
     setSaving(true);
     setStatus(null);
     try {
-      const response = await fetch('http://127.0.0.1:3000/api/settings/session-storage', {
+      const response = await fetch(`${BACKEND_URL}/api/settings/session-storage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode }),

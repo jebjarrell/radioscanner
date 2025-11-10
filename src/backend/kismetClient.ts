@@ -1,6 +1,7 @@
 import { TypedEventEmitter } from './utils/typedEventEmitter.js';
+import { KISMET_CONFIG } from '../config/index.js';
 
-const STATUS_URL = 'http://127.0.0.1:2501/system/status.json';
+const STATUS_URL = `${KISMET_CONFIG.baseUrl}/system/status.json`;
 const POLL_INTERVAL_MS = 5_000;
 const FETCH_TIMEOUT_MS = 2_000;
 
