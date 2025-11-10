@@ -3,6 +3,7 @@ import { WebSocketServer } from 'ws';
 import type { ServiceKey } from '../types/services.js';
 import { SERVICE_KEYS } from '../types/services.js';
 
+import { BluetoothRidClient } from './clients/bluetoothRidClient.js';
 import { KismetRidClient, RemoteIdPayload } from './clients/kismetRid.js';
 import { MAX_AIRCRAFT } from './constants.js';
 import { Dump1090Client, Dump1090Snapshot } from './dump1090Client.js';
@@ -64,6 +65,7 @@ export class HealthMonitor extends TypedEventEmitter<HealthEvents> {
   private readonly dump1090: DumpClient;
   private readonly kismet: KismetLikeClient;
   private readonly kismetRidClient: KismetRidClient;
+  private readonly bluetoothRidClient: BluetoothRidClient;
   private readonly gps: GpsLikeClient;
   private readonly telemetryBatcher = new TelemetryBatcher<TelemetryRecord>((batch) =>
     this.flushTelemetryBatch(batch),
@@ -89,12 +91,15 @@ export class HealthMonitor extends TypedEventEmitter<HealthEvents> {
     this.dump1090 = clients.dump1090;
     this.kismet = clients.kismet;
     this.kismetRidClient = clients.kismetRidClient;
+    this.bluetoothRidClient = clients.bluetoothRidClient;
     this.gps = clients.gps;
     this.attachClientEvents();
   }
 
   async start(): Promise<void> {
     await this.startClients();
+    // Start Bluetooth scanning (gracefully handles failures)
+    await this.bluetoothRidClient.start();
     this.startTelemetryPipeline();
   }
 
@@ -107,6 +112,7 @@ export class HealthMonitor extends TypedEventEmitter<HealthEvents> {
     }
     this.dump1090.stop();
     this.kismet.stop();
+    this.bluetoothRidClient.stop();
     this.rtlTcp.stop().catch(() => undefined);
     this.gps.stop();
     this.telemetryBatcher.dispose();
@@ -309,8 +315,12 @@ export class HealthMonitor extends TypedEventEmitter<HealthEvents> {
       this.lastDumpSnapshot?.aircraft ?? this.dump1090.getLastSnapshot()?.aircraft ?? [];
     const limitedAircraft = aircraft.slice(0, MAX_AIRCRAFT);
 
-    // Fetch drone detections from Kismet UAV API
-    const droneDetections = await this.kismetRidClient.fetchRemoteId();
+    // Fetch drone detections from multiple sources
+    const kismetDrones = await this.kismetRidClient.fetchRemoteId();
+    const bluetoothDrones = this.bluetoothRidClient.getDetections();
+
+    // Merge and deduplicate detections from both sources
+    const droneDetections = this.mergeDroneDetections([...kismetDrones, ...bluetoothDrones]);
 
     return {
       timestamp: new Date().toISOString(),
@@ -325,6 +335,62 @@ export class HealthMonitor extends TypedEventEmitter<HealthEvents> {
         gpsConnected: gpsDerived.connected,
       },
     };
+  }
+
+  /**
+   * Merge and deduplicate drone detections from multiple sources
+   * Prefers Bluetooth data (more complete) over Wi-Fi when both available
+   */
+  private mergeDroneDetections(drones: RemoteIdPayload[]): RemoteIdPayload[] {
+    const map = new Map<string, RemoteIdPayload>();
+
+    for (const drone of drones) {
+      const existing = map.get(drone.droneId);
+
+      if (!existing) {
+        // First time seeing this drone
+        map.set(drone.droneId, drone);
+      } else {
+        // Merge data - prefer Bluetooth (has operator location) over Wi-Fi
+        const merged: RemoteIdPayload = { ...existing };
+
+        // Prefer non-null values from either source
+        if (drone.manufacturer && !merged.manufacturer) {
+          merged.manufacturer = drone.manufacturer;
+        }
+        if (drone.model && !merged.model) {
+          merged.model = drone.model;
+        }
+        if (drone.droneLat !== null) {
+          merged.droneLat = drone.droneLat;
+        }
+        if (drone.droneLon !== null) {
+          merged.droneLon = drone.droneLon;
+        }
+        if (drone.droneAltitude !== null) {
+          merged.droneAltitude = drone.droneAltitude;
+        }
+        if (drone.operatorLat !== null) {
+          merged.operatorLat = drone.operatorLat;
+        }
+        if (drone.operatorLon !== null) {
+          merged.operatorLon = drone.operatorLon;
+        }
+        if (drone.speed !== null) {
+          merged.speed = drone.speed;
+        }
+        if (drone.heading !== null) {
+          merged.heading = drone.heading;
+        }
+
+        // Use most recent lastSeen
+        merged.lastSeen = Math.max(existing.lastSeen, drone.lastSeen);
+
+        map.set(drone.droneId, merged);
+      }
+    }
+
+    return Array.from(map.values());
   }
 
   private flushTelemetryBatch(batch: TelemetryRecord[]): void {
@@ -349,6 +415,7 @@ function createRealClients(): {
   dump1090: Dump1090Client;
   kismet: KismetClient;
   kismetRidClient: KismetRidClient;
+  bluetoothRidClient: BluetoothRidClient;
   gps: GpsClient;
 } {
   return {
@@ -356,6 +423,7 @@ function createRealClients(): {
     dump1090: new Dump1090Client(),
     kismet: new KismetClient(),
     kismetRidClient: new KismetRidClient(),
+    bluetoothRidClient: new BluetoothRidClient(),
     gps: new GpsClient(),
   };
 }
@@ -365,6 +433,7 @@ function createMockClients(): {
   dump1090: MockDump1090Client;
   kismet: MockKismetClient;
   kismetRidClient: KismetRidClient;
+  bluetoothRidClient: BluetoothRidClient;
   gps: MockGpsClient;
 } {
   return {
@@ -372,6 +441,7 @@ function createMockClients(): {
     dump1090: new MockDump1090Client(),
     kismet: new MockKismetClient(),
     kismetRidClient: new KismetRidClient(), // Use real client for both (returns empty array on error)
+    bluetoothRidClient: new BluetoothRidClient(), // Use real client (gracefully handles BT unavailable)
     gps: new MockGpsClient(),
   };
 }
