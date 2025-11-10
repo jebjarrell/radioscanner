@@ -62,8 +62,8 @@ export interface TelemetryFrame {
   aircraft: TelemetryAircraft[];
   drone: {
     ridAvailable: boolean;
+    detections: TelemetryDrone[];
   };
-  drones?: TelemetryDrone[];
   signals: {
     rtlTcpConnected: boolean;
     gpsConnected: boolean;

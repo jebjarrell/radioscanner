@@ -27,55 +27,9 @@ const BROADCAST_MS = 1_000;
 const MAX_ALTITUDE_FT = 60_000;
 const MAX_SPEED_KTS = 1_000;
 
-type DroneSnapshot = {
-  droneId: string;
-  manufacturer: string | null;
-  model: string | null;
-  droneLat: number | null;
-  droneLon: number | null;
-  droneAltitude: number | null;
-  operatorLat: number | null;
-  operatorLon: number | null;
-  speed: number | null;
-  heading: number | null;
-  lastSeen: number;
-  uaType?: string | null;
-};
-
 type RfSpectrumPayload = SpectrumFrame & {
   peaks: Array<{ frequency: number; power: number }>;
 };
-
-const MOCK_DRONES: DroneSnapshot[] = [
-  {
-    droneId: 'DJI-AIR2S-12345',
-    manufacturer: 'DJI',
-    model: 'Air 2S',
-    droneLat: 40.735,
-    droneLon: -73.936,
-    droneAltitude: 50,
-    operatorLat: 40.7305,
-    operatorLon: -73.935,
-    speed: 5.5,
-    heading: 180,
-    lastSeen: Date.now(),
-    uaType: 'multirotor',
-  },
-  {
-    droneId: 'AUTEL-EVO2-67890',
-    manufacturer: 'Autel',
-    model: 'EVO II',
-    droneLat: 40.738,
-    droneLon: -73.932,
-    droneAltitude: 75,
-    operatorLat: null,
-    operatorLon: null,
-    speed: 8.2,
-    heading: 90,
-    lastSeen: Date.now(),
-    uaType: 'multirotor',
-  },
-];
 
 const ScanStartSchema = z.object({
   band: z.string().min(1).optional(),
@@ -98,11 +52,6 @@ function parseBooleanEnv(value: string | undefined): boolean {
   if (!value) return false;
   const normalized = value.trim().toLowerCase();
   return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
-}
-
-function createMockDrones(): DroneSnapshot[] {
-  const now = Date.now();
-  return MOCK_DRONES.map((drone) => ({ ...drone, lastSeen: now }));
 }
 
 function normalizeHeading(value: number): number {
@@ -257,9 +206,8 @@ async function buildServer(): Promise<FastifyInstance> {
     disableWebSocket: true,
   });
 
-  type TelemetryEnvelope = TelemetryFrame & { drones?: DroneSnapshot[] };
   // Initialize with empty frame, will be populated after start
-  let latestFrame: TelemetryEnvelope = {
+  let latestFrame: TelemetryFrame = {
     timestamp: new Date().toISOString(),
     health: {
       rtlTcp: { connected: false },
@@ -271,7 +219,6 @@ async function buildServer(): Promise<FastifyInstance> {
     aircraft: [],
     drone: { ridAvailable: false, detections: [] },
     signals: { rtlTcpConnected: false, gpsConnected: false },
-    drones: createMockDrones(),
   };
   const clients = new Set<WebSocket>();
   let broadcastTimer: NodeJS.Timeout | null = null;
@@ -312,7 +259,7 @@ async function buildServer(): Promise<FastifyInstance> {
   };
 
   healthMonitor.on('health', (frame) => {
-    latestFrame = { ...frame, drones: createMockDrones() };
+    latestFrame = frame;
     queueAircraftFromFrame(frame);
   });
 
@@ -324,7 +271,7 @@ async function buildServer(): Promise<FastifyInstance> {
 
   await healthMonitor.start();
   const snapshot = await healthMonitor.getSnapshot();
-  latestFrame = { ...snapshot, drones: createMockDrones() };
+  latestFrame = snapshot;
   queueAircraftFromFrame(snapshot);
 
   const sendToClients = (payload: string) => {
@@ -347,7 +294,7 @@ async function buildServer(): Promise<FastifyInstance> {
   };
 
   const broadcast = () => {
-    const payload = JSON.stringify({ ...latestFrame, drones: createMockDrones() });
+    const payload = JSON.stringify(latestFrame);
     sendToClients(payload);
   };
 
@@ -376,7 +323,7 @@ async function buildServer(): Promise<FastifyInstance> {
   server.get('/ws', { websocket: true }, (socket: WebSocket) => {
     clients.add(socket);
     try {
-      socket.send(JSON.stringify({ ...latestFrame, drones: createMockDrones() }));
+      socket.send(JSON.stringify(latestFrame));
       if (latestRfFrame) {
         socket.send(JSON.stringify({ type: 'rf_spectrum', payload: latestRfFrame }));
       }
@@ -411,16 +358,16 @@ async function buildServer(): Promise<FastifyInstance> {
   });
 
   server.get('/api/drones', async (_request, reply) => {
-    reply.send({ drones: createMockDrones() });
+    reply.send({ drones: latestFrame.drone.detections });
   });
   server.get('/api/export/drone/:droneId', async (request, reply) => {
     const { droneId } = request.params as { droneId: string };
-    const drones = createMockDrones();
+    const drones = latestFrame.drone.detections;
     const drone = drones.find((entry) => entry.droneId === droneId);
     const header =
       'DroneId,Manufacturer,Model,DroneLat,DroneLon,DroneAltitude,OperatorLat,OperatorLon,Speed,Heading,LastSeen\n';
     const row = drone
-      ? `${drone.droneId},${drone.manufacturer ?? ''},${drone.model ?? ''},${drone.droneLat ?? ''},${drone.droneLon ?? ''},${drone.droneAltitude ?? ''},${drone.operatorLat ?? ''},${drone.operatorLon ?? ''},${drone.speed ?? ''},${drone.heading ?? ''},${new Date(drone.lastSeen).toISOString()}\n`
+      ? `${drone.droneId},${drone.manufacturer ?? ''},${drone.model ?? ''},${drone.droneLat ?? ''},${drone.droneLon ?? ''},${drone.droneAltitude ?? ''},${drone.operatorLat ?? ''},${drone.operatorLon ?? ''},${drone.speed ?? ''},${drone.heading ?? ''},${new Date(drone.lastSeen ?? Date.now()).toISOString()}\n`
       : '';
     const csv = header + row;
     reply.header('Content-Type', 'text/csv');
@@ -467,7 +414,7 @@ async function buildServer(): Promise<FastifyInstance> {
 
   server.get('/api/stats', async () => ({
     aircraftCount: aircraftDb.getCount(),
-    droneCount: latestFrame.drones?.length ?? 0,
+    droneCount: latestFrame.drone.detections.length,
     signalCount: signalDb.getCount(),
   }));
 

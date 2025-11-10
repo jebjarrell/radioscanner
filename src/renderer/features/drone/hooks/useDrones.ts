@@ -12,7 +12,7 @@ export const useDrones = (): Drone[] => {
   const { telemetry } = useTelemetry();
 
   return useMemo(() => {
-    const raw: TelemetryDrone[] | undefined = telemetry?.drones;
+    const raw: TelemetryDrone[] | undefined = telemetry?.drone.detections;
     if (!raw?.length) {
       return [];
     }

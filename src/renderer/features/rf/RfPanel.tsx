@@ -2,9 +2,9 @@ import React from 'react';
 
 import { useRfStream } from '../../hooks/useRfStream';
 
+import { EnhancedRfSpectrum } from './EnhancedRfSpectrum';
+import { EnhancedRfWaterfall } from './EnhancedRfWaterfall';
 import { RfControls } from './RfControls';
-import { RfSpectrum } from './RfSpectrum';
-import { RfWaterfall } from './RfWaterfall';
 
 export const RfPanel: React.FC = () => {
   const frame = useRfStream();
@@ -13,10 +13,10 @@ export const RfPanel: React.FC = () => {
     <div className="rf-panel">
       <RfControls />
       <div className="rf-panel__section">
-        <RfSpectrum frame={frame} />
+        <EnhancedRfSpectrum frame={frame} />
       </div>
       <div className="rf-panel__section">
-        <RfWaterfall frame={frame} />
+        <EnhancedRfWaterfall frame={frame} />
       </div>
     </div>
   );

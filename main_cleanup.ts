@@ -22,7 +22,7 @@ async function runCleanup() {
   }
 }
 
-function hardShutdown(signal?: string) {
+function hardShutdown(_signal?: string) {
   // attempt cleanup, but don't hang forever
   const timeout = setTimeout(() => process.exit(1), 3000);
   runCleanup().finally(() => {
