@@ -2,7 +2,7 @@ import React from 'react';
 
 import { MainContent } from './components/MainContent';
 import { TopBar } from './components/TopBar';
-import { WaterfallView } from './components/WaterfallView';
+import { GPSProvider } from './contexts/GPSContext';
 import { SelectionProvider } from './contexts/SelectionContext';
 import { TelemetryProvider } from './contexts/TelemetryContext';
 import { ToastProvider } from './contexts/ToastContext';
@@ -17,7 +17,6 @@ const AppContent: React.FC = () => {
     <div className="app-container">
       <TopBar />
       <MainContent />
-      <WaterfallView />
       <AircraftDetail />
       <DroneDetail />
     </div>
@@ -27,9 +26,11 @@ const AppContent: React.FC = () => {
 export const App: React.FC = () => (
   <ToastProvider defaultPosition="top-right" defaultDuration={4000}>
     <TelemetryProvider>
-      <SelectionProvider>
-        <AppContent />
-      </SelectionProvider>
+      <GPSProvider>
+        <SelectionProvider>
+          <AppContent />
+        </SelectionProvider>
+      </GPSProvider>
     </TelemetryProvider>
   </ToastProvider>
 );

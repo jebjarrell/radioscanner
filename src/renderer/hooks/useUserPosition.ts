@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
 
+import { useGPS } from '../contexts/GPSContext';
+
 import { useSettings } from './useSettings';
 
 export interface Position {
@@ -9,20 +11,22 @@ export interface Position {
 
 /**
  * Hook to get user's current position
- * Priority: GPS position (future) > Settings default > NYC fallback
+ * Priority: GPS position > Settings default > NYC fallback
  */
 export function useUserPosition(): Position {
+  const { position: gpsPosition } = useGPS();
   const { settings } = useSettings();
 
   return useMemo(() => {
-    // TODO: Add GPS position support when GPS context is implemented
-    // const gpsPosition = useGPS();
-    // if (gpsPosition) return gpsPosition;
+    // Use real GPS position if available
+    if (gpsPosition && typeof gpsPosition.lat === 'number' && typeof gpsPosition.lon === 'number') {
+      return { lat: gpsPosition.lat, lon: gpsPosition.lon };
+    }
 
-    // Use settings-configured default position
+    // Fall back to settings-configured default position
     const lat = settings?.preferences?.mapDefaultCenterLat ?? 40.7306;
     const lon = settings?.preferences?.mapDefaultCenterLon ?? -73.9352;
 
     return { lat, lon };
-  }, [settings?.preferences?.mapDefaultCenterLat, settings?.preferences?.mapDefaultCenterLon]);
+  }, [gpsPosition, settings?.preferences?.mapDefaultCenterLat, settings?.preferences?.mapDefaultCenterLon]);
 }

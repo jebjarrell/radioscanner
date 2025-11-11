@@ -259,6 +259,32 @@ async function buildServer(): Promise<FastifyInstance> {
     }
   };
 
+  /**
+   * Apply dynamic performance settings that don't require restart
+   */
+  const applyPerformanceSettings = (key: string, value: string): void => {
+    if (key === 'performance.peakDetectionSensitivity') {
+      const level = value as 'low' | 'medium' | 'high';
+      if (level === 'low' || level === 'medium' || level === 'high') {
+        rfController.setPeakSensitivity(level);
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`[server] Applied peak sensitivity: ${level}`);
+        }
+      }
+    }
+  };
+
+  // Initialize peak sensitivity from settings on startup
+  const initializeSettings = (): void => {
+    const flat = settingsDb.getAll();
+    const sensitivity = flat['performance.peakDetectionSensitivity'];
+    if (sensitivity === 'low' || sensitivity === 'medium' || sensitivity === 'high') {
+      rfController.setPeakSensitivity(sensitivity);
+    }
+  };
+
+  initializeSettings();
+
   healthMonitor.on('health', (frame) => {
     latestFrame = frame;
     queueAircraftFromFrame(frame);
@@ -438,6 +464,10 @@ async function buildServer(): Promise<FastifyInstance> {
     }
     const { key, value } = parsed.data;
     settingsDb.set(key, value ?? '');
+
+    // Apply dynamic settings that don't require restart
+    applyPerformanceSettings(key, value ?? '');
+
     const needsRestart = requiresRestart([{ key, value: value ?? '' }]);
     return { success: true, requiresRestart: needsRestart };
   });
@@ -452,6 +482,12 @@ async function buildServer(): Promise<FastifyInstance> {
 
     try {
       settingsDb.setMany(body.updates);
+
+      // Apply dynamic settings that don't require restart
+      for (const { key, value } of body.updates) {
+        applyPerformanceSettings(key, value);
+      }
+
       const needsRestart = requiresRestart(body.updates);
       return { success: true, requiresRestart: needsRestart };
     } catch (err) {

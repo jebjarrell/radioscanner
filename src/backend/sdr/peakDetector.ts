@@ -46,10 +46,10 @@ export interface PeakDetectorOptions {
  * Advanced peak detector with noise floor estimation and SNR filtering
  */
 export class PeakDetector {
-  private readonly minSnrDb: number;
-  private readonly minPower: number;
-  private readonly minWidth: number;
-  private readonly maxPeaks: number;
+  private minSnrDb: number;
+  private minPower: number;
+  private minWidth: number;
+  private maxPeaks: number;
   private readonly noiseMethod: 'percentile' | 'median' | 'min';
   private readonly noisePercentile: number;
   private readonly excludeDc: boolean;
@@ -275,5 +275,46 @@ export class PeakDetector {
    */
   getNoiseFloor(bins: number[]): number {
     return this.estimateNoiseFloor(bins);
+  }
+
+  /**
+   * Update detection sensitivity
+   * Allows runtime configuration of detection parameters
+   */
+  setSensitivity(options: {
+    minSnrDb?: number;
+    minPower?: number;
+    minWidth?: number;
+    maxPeaks?: number;
+  }): void {
+    if (options.minSnrDb !== undefined) {
+      this.minSnrDb = options.minSnrDb;
+    }
+    if (options.minPower !== undefined) {
+      this.minPower = options.minPower;
+    }
+    if (options.minWidth !== undefined) {
+      this.minWidth = options.minWidth;
+    }
+    if (options.maxPeaks !== undefined) {
+      this.maxPeaks = options.maxPeaks;
+    }
+  }
+
+  /**
+   * Get current sensitivity settings
+   */
+  getSensitivity(): {
+    minSnrDb: number;
+    minPower: number;
+    minWidth: number;
+    maxPeaks: number;
+  } {
+    return {
+      minSnrDb: this.minSnrDb,
+      minPower: this.minPower,
+      minWidth: this.minWidth,
+      maxPeaks: this.maxPeaks,
+    };
   }
 }

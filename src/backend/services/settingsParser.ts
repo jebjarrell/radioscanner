@@ -127,8 +127,8 @@ export function requiresRestart(updates: Array<{ key: string; value: string }>):
     'services.gpsdHost',
     'services.gpsdPort',
     'session.storageMode',
-    'performance.peakDetectionSensitivity',
     'performance.telemetryUpdateInterval',
+    // Note: performance.peakDetectionSensitivity is applied dynamically, no restart needed
   ];
 
   return updates.some((update) => restartKeys.includes(update.key));

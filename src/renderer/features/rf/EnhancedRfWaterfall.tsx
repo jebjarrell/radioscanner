@@ -13,6 +13,7 @@
 import React, { useEffect, useRef } from 'react';
 
 import type { RfSpectrumFrame } from '../../hooks/useRfStream';
+import { useSettings } from '../../hooks/useSettings';
 import { WaterfallCanvas } from '../../waterfall/WaterfallCanvas';
 
 interface Props {
@@ -30,6 +31,7 @@ export const EnhancedRfWaterfall: React.FC<Props> = ({ frame }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const waterfallRef = useRef<WaterfallCanvas | null>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const { settings } = useSettings();
 
   // Initialize WaterfallCanvas
   useEffect(() => {
@@ -39,9 +41,12 @@ export const EnhancedRfWaterfall: React.FC<Props> = ({ frame }) => {
     }
 
     try {
+      // Get maxRows from settings, default to 100
+      const maxRows = settings?.performance?.waterfallMaxRows ?? 100;
+
       // Create waterfall with custom color palette
       waterfallRef.current = new WaterfallCanvas(canvas, {
-        maxRows: 200,
+        maxRows,
         colorStops: [
           { stop: 0, color: [0, 0, 20] }, // Dark blue (weak)
           { stop: 0.2, color: [0, 32, 128] }, // Blue
@@ -61,7 +66,7 @@ export const EnhancedRfWaterfall: React.FC<Props> = ({ frame }) => {
         waterfallRef.current = null;
       }
     };
-  }, []);
+  }, [settings?.performance?.waterfallMaxRows]);
 
   // Push new spectrum data to waterfall
   useEffect(() => {

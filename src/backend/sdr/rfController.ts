@@ -98,6 +98,44 @@ export class RfController extends TypedEventEmitter<RfControllerEvents> {
     this.current = null;
   }
 
+  /**
+   * Set peak detection sensitivity level
+   * @param level 'low' (fewer peaks, higher SNR) | 'medium' (default) | 'high' (more peaks, lower SNR)
+   */
+  setPeakSensitivity(level: 'low' | 'medium' | 'high'): void {
+    switch (level) {
+      case 'low':
+        // Less sensitive - higher SNR threshold, fewer peaks
+        this.peakDetector.setSensitivity({
+          minSnrDb: 10, // 10 dB above noise floor
+          minPower: -75, // Higher minimum power
+          minWidth: 2, // Wider peaks only
+          maxPeaks: 30, // Fewer peaks
+        });
+        break;
+
+      case 'medium':
+        // Default balanced settings
+        this.peakDetector.setSensitivity({
+          minSnrDb: 6, // 6 dB above noise floor
+          minPower: -80, // Standard minimum power
+          minWidth: 1, // At least 1 bin wide
+          maxPeaks: 50, // Standard peak count
+        });
+        break;
+
+      case 'high':
+        // More sensitive - lower SNR threshold, more peaks
+        this.peakDetector.setSensitivity({
+          minSnrDb: 3, // 3 dB above noise floor
+          minPower: -85, // Lower minimum power
+          minWidth: 1, // Any width
+          maxPeaks: 100, // More peaks
+        });
+        break;
+    }
+  }
+
   private pickPeaks(
     frame: SpectrumFrame,
   ): Array<{ frequency: number; power: number; snr?: number }> {
