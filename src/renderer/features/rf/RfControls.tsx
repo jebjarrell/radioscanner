@@ -111,30 +111,33 @@ export const RfControls: React.FC = () => {
         </select>
       </div>
       <div className="row">
-        <label htmlFor="rf-center">Center (Hz)</label>
+        <label htmlFor="rf-center">Center (MHz)</label>
         <input
           id="rf-center"
           type="number"
-          value={centerHz}
-          onChange={(event) => setCenterHz(Number(event.target.value))}
+          step="0.001"
+          value={(centerHz / 1_000_000).toFixed(3)}
+          onChange={(event) => setCenterHz(Number(event.target.value) * 1_000_000)}
         />
       </div>
       <div className="row">
-        <label htmlFor="rf-span">Span (Hz)</label>
+        <label htmlFor="rf-span">Span (MHz)</label>
         <input
           id="rf-span"
           type="number"
-          value={spanHz}
-          onChange={(event) => setSpanHz(Number(event.target.value))}
+          step="0.001"
+          value={(spanHz / 1_000_000).toFixed(3)}
+          onChange={(event) => setSpanHz(Number(event.target.value) * 1_000_000)}
         />
       </div>
       <div className="row">
-        <label htmlFor="rf-srate">Sample Rate (Hz)</label>
+        <label htmlFor="rf-srate">Sample Rate (MHz)</label>
         <input
           id="rf-srate"
           type="number"
-          value={sampleRate}
-          onChange={(event) => setSampleRate(Number(event.target.value))}
+          step="0.001"
+          value={(sampleRate / 1_000_000).toFixed(3)}
+          onChange={(event) => setSampleRate(Number(event.target.value) * 1_000_000)}
         />
       </div>
       <div className="row">

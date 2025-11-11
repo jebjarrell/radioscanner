@@ -3,7 +3,8 @@ export const RF_BANDS = {
   marine: { label: 'Marine', centerHz: 156_800_000, sampleRate: 2_048_000, spanHz: 2_048_000 },
   gmrs: { label: 'GMRS', centerHz: 462_625_000, sampleRate: 2_400_000, spanHz: 2_400_000 },
   frs: { label: 'FRS', centerHz: 467_562_500, sampleRate: 2_400_000, spanHz: 2_400_000 },
-  rail: { label: 'Rail', centerHz: 160_230_000, sampleRate: 2_048_000, spanHz: 2_048_000 },
+  '2m_amateur': { label: '2m Amateur', centerHz: 146_000_000, sampleRate: 2_048_000, spanHz: 2_048_000 },
+  '70cm_amateur': { label: '70cm Amateur', centerHz: 435_000_000, sampleRate: 2_400_000, spanHz: 2_400_000 },
 } as const;
 
 export type RfBandKey = keyof typeof RF_BANDS;
