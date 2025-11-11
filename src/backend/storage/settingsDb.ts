@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import BetterSqlite3 from 'better-sqlite3';
 
 const DEFAULT_SETTINGS: Array<[string, string]> = [
   // Session
@@ -47,9 +47,9 @@ const DEFAULT_SETTINGS: Array<[string, string]> = [
 ];
 
 export class SettingsDatabase {
-  private readonly upsertStmt: Database.Statement<[string, string, number]>;
+  private readonly upsertStmt: BetterSqlite3.Statement<[string, string, number]>;
 
-  constructor(private readonly db: Database.Database) {
+  constructor(private readonly db: BetterSqlite3.Database) {
     this.db.exec(`
       PRAGMA journal_mode=WAL;
       CREATE TABLE IF NOT EXISTS user_settings (

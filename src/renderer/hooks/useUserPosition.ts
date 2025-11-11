@@ -28,5 +28,9 @@ export function useUserPosition(): Position {
     const lon = settings?.preferences?.mapDefaultCenterLon ?? -73.9352;
 
     return { lat, lon };
-  }, [gpsPosition, settings?.preferences?.mapDefaultCenterLat, settings?.preferences?.mapDefaultCenterLon]);
+  }, [
+    gpsPosition,
+    settings?.preferences?.mapDefaultCenterLat,
+    settings?.preferences?.mapDefaultCenterLon,
+  ]);
 }

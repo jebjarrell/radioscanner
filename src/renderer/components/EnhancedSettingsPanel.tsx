@@ -31,10 +31,10 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
     if (key in pendingChanges) return pendingChanges[key];
 
     const parts = key.split('.');
-    let current: any = settings;
+    let current: unknown = settings;
     for (const part of parts) {
       if (current && typeof current === 'object' && part in current) {
-        current = current[part];
+        current = (current as Record<string, unknown>)[part];
       } else {
         return fallback;
       }

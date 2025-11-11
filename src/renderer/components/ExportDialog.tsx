@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import ReactDOM from 'react-dom';
+import { createPortal } from 'react-dom';
 
 import { BACKEND_URL } from '../../config/client.js';
 
@@ -162,5 +162,5 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose }) =
     </div>
   );
 
-  return ReactDOM.createPortal(dialog, portalTarget);
+  return createPortal(dialog, portalTarget);
 };
