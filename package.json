@@ -11,6 +11,10 @@
     "dev": "vite dev",
     "backend": "node --import tsx/esm src/backend/server.ts",
     "build": "npm run lint && npm run typecheck && vite build && electron-builder --linux AppImage --publish=never && node scripts/copy-appimage.mjs",
+    "build:linux": "npm run lint && npm run typecheck && vite build && electron-builder --linux AppImage --publish=never && node scripts/copy-appimage.mjs",
+    "build:win": "npm run lint && npm run typecheck && vite build && electron-builder --win --publish=never && node scripts/copy-windows-installer.mjs",
+    "build:all": "npm run lint && npm run typecheck && vite build && electron-builder --win --linux AppImage --publish=never",
+    "rebuild:electron": "electron-rebuild -f -w better-sqlite3",
     "lint": "eslint . --ext .ts,.tsx,.js,.cjs,.mjs --max-warnings=0",
     "test": "vitest",
     "typecheck": "tsc --noEmit",
@@ -92,6 +96,35 @@
           ]
         }
       ]
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "public/icon.png",
+      "artifactName": "onthego-scanner-${version}-${arch}-setup.${ext}",
+      "publish": null
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "OnTheGo Scanner",
+      "runAfterFinish": false,
+      "deleteAppDataOnUninstall": false
     },
     "publish": null
   }

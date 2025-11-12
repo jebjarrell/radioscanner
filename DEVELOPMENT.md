@@ -84,8 +84,12 @@
 
 - **Node.js** 18.17.0+ (LTS recommended)
 - **npm** 9.0.0+
-- **Linux** (Ubuntu/Debian recommended for hardware support)
+- **Operating System:**
+  - **Linux** (Ubuntu/Debian recommended for full hardware support)
+  - **Windows** 10/11 (limited hardware support, see [WINDOWS_BUILD.md](WINDOWS_BUILD.md))
 - **Git**
+
+**Note for Windows developers:** See [WINDOWS_BUILD.md](WINDOWS_BUILD.md) for Windows-specific setup instructions including build tools and native module compilation.
 
 ### Optional Hardware
 

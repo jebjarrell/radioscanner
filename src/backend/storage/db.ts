@@ -52,4 +52,6 @@ if (SESSION_DB_FILE !== ':memory:') {
 export const sessionDb = new BetterSqlite3(SESSION_DB_FILE);
 export { settingsDb };
 
-console.log(`[db] session=${SESSION_DB_FILE} settings=${SETTINGS_DB_FILE}`);
+console.log(
+  `[db] platform=${process.platform} session=${SESSION_DB_FILE} settings=${SETTINGS_DB_FILE}`,
+);

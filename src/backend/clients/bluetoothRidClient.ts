@@ -64,6 +64,13 @@ export class BluetoothRidClient {
       return;
     }
 
+    // Windows platform notification
+    if (process.platform === 'win32') {
+      console.log(
+        '[BluetoothRidClient] Windows detected - ensure Bluetooth adapter configured with Zadig (WinUSB driver)',
+      );
+    }
+
     try {
       // Dynamically import noble (may fail if Bluetooth not available)
       this.noble = await import('@abandonware/noble');
@@ -83,6 +90,12 @@ export class BluetoothRidClient {
       console.log('[BluetoothRidClient] Initialized - waiting for Bluetooth to power on');
     } catch (error) {
       console.warn('[BluetoothRidClient] Failed to initialize Bluetooth:', error);
+      if (process.platform === 'win32') {
+        console.warn(
+          '[BluetoothRidClient] Windows requires: (1) windows-build-tools, (2) WinUSB driver via Zadig',
+        );
+        console.warn('[BluetoothRidClient] See WINDOWS_SETUP.md for detailed instructions');
+      }
       // Graceful degradation - continue without Bluetooth
     }
   }

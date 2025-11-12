@@ -3,7 +3,7 @@
 **Real-time aircraft tracking, drone detection, and RF spectrum analysis in one application.**
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Platform](https://img.shields.io/badge/platform-Linux-lightgrey.svg)
+![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-lightgrey.svg)
 ![Version](https://img.shields.io/badge/version-0.1.0-green.svg)
 
 ---
@@ -43,17 +43,54 @@
 
 ---
 
+## Windows Support
+
+OnTheGo Scanner now supports Windows 10/11 with some limitations.
+
+### Feature Comparison
+
+| Feature | Linux | Windows |
+|---------|-------|---------|
+| UI/UX | ✅ Full | ✅ Full |
+| Mock Data Mode | ✅ Full | ✅ Full |
+| Database & Settings | ✅ Full | ✅ Full |
+| RTL-SDR (RF Spectrum) | ✅ Full | ✅ Full* |
+| Bluetooth Remote ID | ✅ Full | ⚠️ Requires Driver Setup |
+| ADS-B (dump1090) | ✅ Native | ❌ Alternative Required |
+| Wi-Fi Remote ID (Kismet) | ✅ Full | ⚠️ Experimental |
+| GPS (gpsd) | ✅ Full | ❌ Not Available |
+
+*Requires RTL-SDR drivers and Zadig WinUSB setup
+
+**Windows Installation:**
+- Download Windows installer from [Releases](https://github.com/yourusername/radioscanner/releases)
+- See [WINDOWS_SETUP.md](WINDOWS_SETUP.md) for complete setup guide
+- Developers: See [WINDOWS_BUILD.md](WINDOWS_BUILD.md) for building from source
+
+**Recommended for Windows users:** Run in **Mock Data Mode** for full UI experience without hardware setup.
+
+---
+
 ## Quick Start
 
 ### For Users
 
 **1. Installation**
 
+**Linux:**
 Download the latest AppImage from [Releases](https://github.com/yourusername/radioscanner/releases):
 
 ```bash
 chmod +x onthego-scanner-*.AppImage
 ./onthego-scanner-*.AppImage
+```
+
+**Windows:**
+Download the Windows installer and see [WINDOWS_SETUP.md](WINDOWS_SETUP.md):
+
+```powershell
+# Run the installer
+.\onthego-scanner-X.X.X-x64-setup.exe
 ```
 
 **2. Hardware Setup (Optional)**
@@ -98,11 +135,21 @@ npm run dev
 **3. Build**
 
 ```bash
-npm run build
+# Linux
+npm run build:linux
 # Output: dist/onthego-scanner-*.AppImage
+
+# Windows
+npm run build:win
+# Output: dist/onthego-scanner-*-setup.exe
+
+# All platforms
+npm run build:all
 ```
 
-**📖 Full Development Guide:** See [DEVELOPMENT.md](DEVELOPMENT.md) for architecture and API docs
+**📖 Development Guides:**
+- [DEVELOPMENT.md](DEVELOPMENT.md) - Architecture and API docs
+- [WINDOWS_BUILD.md](WINDOWS_BUILD.md) - Building for Windows
 
 ---
 
@@ -111,7 +158,9 @@ npm run build
 | Document | Description |
 |----------|-------------|
 | **[USER_GUIDE.md](USER_GUIDE.md)** | Complete user manual with setup, features, and troubleshooting |
+| **[WINDOWS_SETUP.md](WINDOWS_SETUP.md)** | Windows installation and setup guide |
 | **[DEVELOPMENT.md](DEVELOPMENT.md)** | Architecture, API reference, and development workflow |
+| **[WINDOWS_BUILD.md](WINDOWS_BUILD.md)** | Building for Windows (developers) |
 | **[OnTheGo_Scanner_PRD_v4.md](OnTheGo_Scanner_PRD_v4.md)** | Product requirements and specifications |
 | **[OnTheGo_Scanner_TRD_v4.md](OnTheGo_Scanner_TRD_v4.md)** | Technical design and implementation details |
 
@@ -121,7 +170,9 @@ npm run build
 
 ### System Requirements
 
-- **OS:** Linux (Ubuntu 20.04+ recommended)
+- **OS:**
+  - Linux (Ubuntu 20.04+ recommended) - Full feature support
+  - Windows 10/11 (64-bit) - Limited feature support
 - **Node.js:** 18.17.0+ (for development)
 - **RAM:** 4GB minimum, 8GB recommended
 - **CPU:** Multi-core processor recommended

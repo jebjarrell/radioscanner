@@ -134,7 +134,9 @@ async function stopBackend(): Promise<void> {
       }
     }, 5_000);
 
-    child.kill('SIGTERM');
+    // Windows doesn't support SIGTERM the same way, use SIGKILL directly
+    const killSignal = process.platform === 'win32' ? 'SIGKILL' : 'SIGTERM';
+    child.kill(killSignal);
   });
 }
 
