@@ -5,22 +5,18 @@ import { fileURLToPath } from 'node:url';
 
 import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron';
 
-import { BACKEND_CONFIG } from '../config/index.js';
 import type { ServiceKey } from '../types/services.js';
 
 import { registerCleanup } from './main_cleanup.js';
 
 const isDev = !app.isPackaged;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const MAP_TILE_ORIGIN = 'https://demotiles.maplibre.org';
-
-// Build CSP policy dynamically based on backend host
-const BACKEND_HOST = BACKEND_CONFIG.host;
+// CSP for offline-first operation - no external map tiles
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
-  `img-src 'self' blob: data: ${MAP_TILE_ORIGIN}`,
-  `connect-src 'self' http://${BACKEND_HOST}:* ws://${BACKEND_HOST}:* wss://${BACKEND_HOST}:* ${MAP_TILE_ORIGIN}`,
-  `font-src 'self' ${MAP_TILE_ORIGIN}`,
+  "img-src 'self' blob: data:",
+  "connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:* wss://127.0.0.1:*",
+  "font-src 'self'",
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
   "worker-src 'self' blob:",
@@ -29,8 +25,9 @@ const CONTENT_SECURITY_POLICY = [
 
 const shouldUseMockData = parseBooleanEnv(process.env.USE_MOCK_DATA);
 
-const BACKEND_PORT = BACKEND_CONFIG.port.toString();
-const BACKEND_BASE_URL = BACKEND_CONFIG.baseUrl;
+const BACKEND_HOST = '127.0.0.1';
+const BACKEND_PORT = process.env.BACKEND_PORT ?? '3000';
+const BACKEND_BASE_URL = `http://${BACKEND_HOST}:${BACKEND_PORT}`;
 const BACKEND_HEALTH_URL = `${BACKEND_BASE_URL}/health`;
 
 const RETRYABLE_SERVICES = new Set<ServiceKey>(['rtlTcp', 'dump1090', 'kismet', 'gps']);
@@ -134,9 +131,7 @@ async function stopBackend(): Promise<void> {
       }
     }, 5_000);
 
-    // Windows doesn't support SIGTERM the same way, use SIGKILL directly
-    const killSignal = process.platform === 'win32' ? 'SIGKILL' : 'SIGTERM';
-    child.kill(killSignal);
+    child.kill('SIGTERM');
   });
 }
 
@@ -153,139 +148,98 @@ app.on('before-quit', (event) => {
     return;
   }
   quitHandling = true;
+  void (async () => {
+    const window = BrowserWindow.getAllWindows()[0];
+    if (!window) {
+      appQuitting = true;
+      app.quit();
+      return;
+    }
 
-  const handleQuitSequence = async () => {
+    let hasData = false;
     try {
-      const window = BrowserWindow.getAllWindows()[0];
-      if (!window) {
-        appQuitting = true;
-        app.quit();
-        return;
+      const response = await fetch(`${BACKEND_BASE_URL}/api/stats`);
+      if (response.ok) {
+        const stats = (await response.json()) as {
+          aircraftCount?: number;
+          droneCount?: number;
+          signalCount?: number;
+        };
+        const { aircraftCount = 0, droneCount = 0, signalCount = 0 } = stats;
+        const total = aircraftCount + droneCount + signalCount;
+        hasData = total > 0;
       }
+    } catch {
+      hasData = false;
+    }
 
-      let hasData = false;
-      try {
-        const response = await fetch(`${BACKEND_BASE_URL}/api/stats`);
-        if (response.ok) {
-          const stats = (await response.json()) as {
-            aircraftCount?: number;
-            droneCount?: number;
-            signalCount?: number;
-          };
-          const { aircraftCount = 0, droneCount = 0, signalCount = 0 } = stats;
-          const total = aircraftCount + droneCount + signalCount;
-          hasData = total > 0;
-        }
-      } catch {
-        hasData = false;
-      }
-
-      if (!hasData) {
-        appQuitting = true;
-        app.quit();
-        quitHandling = false;
-        return;
-      }
-
-      const { response: choice } = await dialog.showMessageBox(window, {
-        type: 'question',
-        buttons: ['Save & Quit', 'Quit Without Saving', 'Cancel'],
-        defaultId: 0,
-        cancelId: 2,
-        title: 'Save Session Data?',
-        message: 'You have unsaved session data.',
-        detail: 'Do you want to save before closing?',
-      });
-
-      if (choice === 2) {
-        quitHandling = false;
-        return;
-      }
-
-      if (choice === 0) {
-        const { filePath } = await dialog.showSaveDialog(window, {
-          title: 'Save Session Data',
-          defaultPath: path.join(
-            app.getPath('documents'),
-            'Radio-Scanner-Sessions',
-            `session_${Date.now()}.sqlite`,
-          ),
-          filters: [{ name: 'SQLite Database', extensions: ['sqlite', 'db'] }],
-        });
-        if (!filePath) {
-          quitHandling = false;
-          return;
-        }
-
-        try {
-          const response = await fetch(`${BACKEND_BASE_URL}/api/session/save`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ path: filePath }),
-          });
-          if (!response.ok) {
-            throw new Error(`Save failed with status ${response.status}`);
-          }
-        } catch (err) {
-          const { response: followUp } = await dialog.showMessageBox(window, {
-            type: 'error',
-            buttons: ['Quit Anyway', 'Cancel'],
-            defaultId: 1,
-            cancelId: 1,
-            title: 'Save Failed',
-            message: 'Failed to save session data.',
-            detail: err instanceof Error ? err.message : 'Unknown error',
-          });
-          if (followUp === 1) {
-            quitHandling = false;
-            return;
-          }
-        }
-      }
-
+    if (!hasData) {
       appQuitting = true;
       app.quit();
       quitHandling = false;
-    } catch (error) {
-      console.error('Fatal error in quit sequence:', error);
+      return;
+    }
+
+    const { response: choice } = await dialog.showMessageBox(window, {
+      type: 'question',
+      buttons: ['Save & Quit', 'Quit Without Saving', 'Cancel'],
+      defaultId: 0,
+      cancelId: 2,
+      title: 'Save Session Data?',
+      message: 'You have unsaved session data.',
+      detail: 'Do you want to save before closing?',
+    });
+
+    if (choice === 2) {
       quitHandling = false;
-      // Show error dialog and force quit
-      const window = BrowserWindow.getAllWindows()[0];
-      if (window && !window.isDestroyed()) {
-        dialog
-          .showMessageBox(window, {
-            type: 'error',
-            buttons: ['Force Quit', 'Cancel'],
-            defaultId: 0,
-            cancelId: 1,
-            title: 'Quit Error',
-            message: 'An unexpected error occurred during quit.',
-            detail: error instanceof Error ? error.message : 'Unknown error',
-          })
-          .then(({ response }) => {
-            if (response === 0) {
-              appQuitting = true;
-              app.quit();
-            }
-          })
-          .catch((err) => {
-            console.error('Failed to show error dialog:', err);
-            appQuitting = true;
-            app.quit();
-          });
-      } else {
-        appQuitting = true;
-        app.quit();
+      return;
+    }
+
+    if (choice === 0) {
+      const { filePath } = await dialog.showSaveDialog(window, {
+        title: 'Save Session Data',
+        defaultPath: path.join(
+          app.getPath('documents'),
+          'Radio-Scanner-Sessions',
+          `session_${Date.now()}.sqlite`,
+        ),
+        filters: [{ name: 'SQLite Database', extensions: ['sqlite', 'db'] }],
+      });
+      if (!filePath) {
+        quitHandling = false;
+        return;
+      }
+
+      try {
+        const response = await fetch(`${BACKEND_BASE_URL}/api/session/save`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: filePath }),
+        });
+        if (!response.ok) {
+          throw new Error(`Save failed with status ${response.status}`);
+        }
+      } catch (err) {
+        const { response: followUp } = await dialog.showMessageBox(window, {
+          type: 'error',
+          buttons: ['Quit Anyway', 'Cancel'],
+          defaultId: 1,
+          cancelId: 1,
+          title: 'Save Failed',
+          message: 'Failed to save session data.',
+          detail: err instanceof Error ? err.message : 'Unknown error',
+        });
+        if (followUp === 1) {
+          quitHandling = false;
+          return;
+        }
       }
     }
-  };
 
-  handleQuitSequence().catch((err) => {
-    console.error('Unhandled error in quit handler:', err);
-    quitHandling = false;
     appQuitting = true;
     app.quit();
-  });
+    quitHandling = false;
+  })();
 });
 
 const createWindow = async () => {

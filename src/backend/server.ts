@@ -387,6 +387,13 @@ async function buildServer(): Promise<FastifyInstance> {
     reply.send({ aircraft });
   });
 
+  server.get('/api/aircraft/cached', async (request, reply) => {
+    const { limit } = request.query as { limit?: string };
+    const limitNum = limit ? parseInt(limit, 10) : 200;
+    const cachedAircraft = aircraftDb.getRecent(limitNum);
+    reply.send({ aircraft: cachedAircraft });
+  });
+
   server.get('/api/drones', async (_request, reply) => {
     reply.send({ drones: latestFrame.drone.detections });
   });
