@@ -95,6 +95,12 @@ body {
   color: #fecaca;
 }
 
+.map-panel__telemetry--cached {
+  background: rgba(251, 191, 36, 0.18);
+  border-color: rgba(251, 191, 36, 0.35);
+  color: #fde68a;
+}
+
 .map-panel__controls {
   display: flex;
   flex-wrap: wrap;

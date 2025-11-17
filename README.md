@@ -20,6 +20,20 @@ The renderer dependency matrix (All Services / RF-only / Localize-only / Offline
 - WebSocket telemetry binds to `127.0.0.1` and no remote code paths are exposed outside the known service ports.
 - Health monitor errors stay internal unless you opt into development logging.
 
+## Offline Mode
+
+**OnTheGo Scanner operates fully offline** with no external network dependencies. The app includes:
+
+- ✅ **Local map tiles** - No CDN required (basic dark background fallback, optional MBTiles)
+- ✅ **Service Worker caching** - Static assets cached for instant offline loading
+- ✅ **IndexedDB telemetry cache** - Last received data persists between sessions
+- ✅ **SQLite persistence** - Aircraft and signal data stored locally
+- ✅ **Smart UI indicators** - Shows when displaying cached vs. live data
+
+The app requires only a local backend (port 3000) and optional hardware services. No internet connection needed for operation.
+
+**See [OFFLINE_MODE.md](./OFFLINE_MODE.md) for complete offline setup guide, including how to add custom map tiles.**
+
 ## Mock Mode
 
 Set `USE_MOCK_DATA=1` (or `true/yes/on`) before launching the app to swap in mock clients for all four services. Mock mode drives deterministic snapshots, exercises the dependency matrix, and avoids live hardware requirements. The main process echoes an info banner when mock data is active, and the renderer remains fully interactive.

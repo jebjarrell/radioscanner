@@ -13,7 +13,8 @@ import { WaterfallCanvas } from '../waterfall/WaterfallCanvas.js';
 type LayerKey = 'aircraft' | 'drones' | 'signals' | 'waterfall';
 type DependencyMode = 'all' | 'rfOnly' | 'localizeOnly' | 'offlineDemo';
 
-const MAP_STYLE_URL = 'https://demotiles.maplibre.org/style.json';
+// Use local offline map style instead of external CDN
+const MAP_STYLE_URL = '/maps/style.json';
 const MAP_DEFAULT_CENTER: [number, number] = [-73.935242, 40.73061];
 const DEFAULT_ZOOM = 9.5;
 
@@ -294,12 +295,24 @@ export class MapPanel {
     this.syncDroneMarkers(drones);
   }
 
-  public setTelemetryConnected(connected: boolean): void {
+  public setTelemetryConnected(connected: boolean, isFromCache?: boolean, cacheTimestamp?: number): void {
     this.telemetryBadge.classList.toggle('map-panel__telemetry--connected', connected);
     this.telemetryBadge.classList.toggle('map-panel__telemetry--disconnected', !connected);
-    this.telemetryBadge.textContent = connected ? 'Telemetry: streaming' : 'Telemetry: offline';
+    this.telemetryBadge.classList.toggle('map-panel__telemetry--cached', isFromCache === true);
 
-    if (!connected) {
+    if (connected) {
+      this.telemetryBadge.textContent = 'Telemetry: streaming';
+    } else if (isFromCache && cacheTimestamp) {
+      const elapsed = Date.now() - cacheTimestamp;
+      const minutes = Math.floor(elapsed / 60000);
+      const seconds = Math.floor((elapsed % 60000) / 1000);
+      const timeStr = minutes > 0 ? `${minutes}m ago` : `${seconds}s ago`;
+      this.telemetryBadge.textContent = `Telemetry: offline (cached ${timeStr})`;
+    } else {
+      this.telemetryBadge.textContent = 'Telemetry: offline';
+    }
+
+    if (!connected && !isFromCache) {
       this.latestFrame = null;
       this.currentDrones = [];
       this.clearDroneOverlays();

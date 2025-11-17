@@ -78,6 +78,41 @@ export class AircraftDatabase {
     return row?.count ?? 0;
   }
 
+  getRecent(limit: number = 200): Array<{
+    icao: string;
+    callsign: string | null;
+    altitude: number | null;
+    speed: number | null;
+    heading: number | null;
+    lat: number | null;
+    lon: number | null;
+    vertical_rate: number | null;
+    squawk: string | null;
+    last_seen: number;
+  }> {
+    return this.db
+      .prepare(
+        `
+      SELECT icao, callsign, altitude, speed, heading, lat, lon, vertical_rate, squawk, last_seen
+      FROM aircraft
+      ORDER BY last_seen DESC
+      LIMIT ?
+    `,
+      )
+      .all(limit) as Array<{
+      icao: string;
+      callsign: string | null;
+      altitude: number | null;
+      speed: number | null;
+      heading: number | null;
+      lat: number | null;
+      lon: number | null;
+      vertical_rate: number | null;
+      squawk: string | null;
+      last_seen: number;
+    }>;
+  }
+
   exportToCsv(start?: number, end?: number): string {
     const rows = this.db
       .prepare(

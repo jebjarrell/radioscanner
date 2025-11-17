@@ -10,7 +10,7 @@ export const MapContainer: React.FC = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapPanelRef = useRef<MapPanel | null>(null);
   const version = useAppVersion();
-  const { telemetry, connected } = useTelemetry();
+  const { telemetry, connected, isFromCache, cacheTimestamp } = useTelemetry();
   const { selectAircraft, selectDrone } = useSelection();
   const drones = useDrones();
 
@@ -38,9 +38,9 @@ export const MapContainer: React.FC = () => {
 
   useEffect(() => {
     if (mapPanelRef.current) {
-      mapPanelRef.current.setTelemetryConnected(connected);
+      mapPanelRef.current.setTelemetryConnected(connected, isFromCache, cacheTimestamp);
     }
-  }, [connected]);
+  }, [connected, isFromCache, cacheTimestamp]);
 
   useEffect(() => {
     if (telemetry && mapPanelRef.current) {

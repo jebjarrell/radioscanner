@@ -11,12 +11,12 @@ import { registerCleanup } from './main_cleanup.js';
 
 const isDev = !app.isPackaged;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const MAP_TILE_ORIGIN = 'https://demotiles.maplibre.org';
+// CSP for offline-first operation - no external map tiles
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
-  `img-src 'self' blob: data: ${MAP_TILE_ORIGIN}`,
-  `connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:* wss://127.0.0.1:* ${MAP_TILE_ORIGIN}`,
-  `font-src 'self' ${MAP_TILE_ORIGIN}`,
+  "img-src 'self' blob: data:",
+  "connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:* wss://127.0.0.1:*",
+  "font-src 'self'",
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
   "worker-src 'self' blob:",

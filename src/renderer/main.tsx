@@ -15,3 +15,22 @@ if (root) {
     </React.StrictMode>,
   );
 }
+
+// Register Service Worker for offline caching
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/service-worker.js')
+      .then((registration) => {
+        console.log('[App] ServiceWorker registered:', registration.scope);
+
+        // Check for updates periodically
+        setInterval(() => {
+          registration.update();
+        }, 60000); // Check every minute
+      })
+      .catch((error) => {
+        console.error('[App] ServiceWorker registration failed:', error);
+      });
+  });
+}
