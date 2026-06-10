@@ -8,13 +8,14 @@ import {
 } from '../../types/services.js';
 import type { Drone } from '../features/drone/types.js';
 import type { TelemetryAircraft, TelemetryFrame, TelemetryHealthSnapshot } from '../types.js';
+import { getMapStyleUrl } from '../utils/mapStyles.js';
 import { WaterfallCanvas } from '../waterfall/WaterfallCanvas.js';
 
 type LayerKey = 'aircraft' | 'drones' | 'signals' | 'waterfall';
 type DependencyMode = 'all' | 'rfOnly' | 'localizeOnly' | 'offlineDemo';
 
-// Use local offline map style instead of external CDN
-const MAP_STYLE_URL = '/maps/style.json';
+// Bundled offline style keeps the map usable without network access
+const DEFAULT_MAP_STYLE_ID = 'offline';
 const MAP_DEFAULT_CENTER: [number, number] = [-73.935242, 40.73061];
 const DEFAULT_ZOOM = 9.5;
 
@@ -98,6 +99,7 @@ interface MatrixRow {
 
 interface MapPanelOptions {
   version: string;
+  mapStyleId?: string;
   onAircraftClick?: (icao: string) => void;
   onDroneClick?: (droneId: string) => void;
 }
@@ -152,12 +154,14 @@ export class MapPanel {
   private signalMarkers: { rtl: Marker; gps: Marker } | null = null;
   private currentDrones: Drone[] = [];
   private mapReady = false;
+  private mapStyleId: string;
 
   constructor(root: HTMLElement, options: MapPanelOptions) {
     this.root = root;
     this.root.classList.add('app-shell');
     this.onAircraftClick = options.onAircraftClick;
     this.onDroneClick = options.onDroneClick;
+    this.mapStyleId = options.mapStyleId ?? DEFAULT_MAP_STYLE_ID;
 
     this.panel = document.createElement('div');
     this.panel.className = 'map-panel';
@@ -295,7 +299,11 @@ export class MapPanel {
     this.syncDroneMarkers(drones);
   }
 
-  public setTelemetryConnected(connected: boolean, isFromCache?: boolean, cacheTimestamp?: number): void {
+  public setTelemetryConnected(
+    connected: boolean,
+    isFromCache?: boolean,
+    cacheTimestamp?: number,
+  ): void {
     this.telemetryBadge.classList.toggle('map-panel__telemetry--connected', connected);
     this.telemetryBadge.classList.toggle('map-panel__telemetry--disconnected', !connected);
     this.telemetryBadge.classList.toggle('map-panel__telemetry--cached', isFromCache === true);
@@ -325,6 +333,21 @@ export class MapPanel {
     this.versionBadge.textContent = `v${version}`;
   }
 
+  public setMapStyle(styleId: string): void {
+    if (styleId === this.mapStyleId) {
+      return;
+    }
+    this.mapStyleId = styleId;
+    // Changing the style drops all custom sources/layers; drone lines must be rebuilt
+    this.droneLines.clear();
+    this.map.once('styledata', () => {
+      if (this.layerState.drones && this.currentDrones.length) {
+        this.syncDroneMarkers(this.currentDrones);
+      }
+    });
+    this.map.setStyle(getMapStyleUrl(styleId));
+  }
+
   public isLayerEnabled(layer: LayerKey): boolean {
     return this.layerState[layer];
   }
@@ -339,7 +362,7 @@ export class MapPanel {
   private createMap(): MapLibreMap {
     const map = new MapLibreMap({
       container: this.mapContainer,
-      style: MAP_STYLE_URL,
+      style: getMapStyleUrl(this.mapStyleId),
       center: MAP_DEFAULT_CENTER,
       zoom: DEFAULT_ZOOM,
       attributionControl: false,

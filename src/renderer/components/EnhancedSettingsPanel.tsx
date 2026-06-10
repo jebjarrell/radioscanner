@@ -356,6 +356,7 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                   value={getValue('preferences.mapStyle')}
                   onChange={(e) => handleChange('preferences.mapStyle', e.target.value)}
                 >
+                  <option value="offline">Offline (Local Tiles)</option>
                   <option value="demotiles">MapLibre Demo Tiles</option>
                   <option value="osm">OpenStreetMap</option>
                   <option value="dark">Dark Mode</option>

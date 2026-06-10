@@ -10,9 +10,11 @@ import { Dump1090Client, Dump1090Snapshot } from './dump1090Client.js';
 import { GpsClient, GpsStatus } from './gpsClient.js';
 import { KismetClient, KismetStatus } from './kismetClient.js';
 import {
+  MockBluetoothRidClient,
   MockDump1090Client,
   MockGpsClient,
   MockKismetClient,
+  MockKismetRidClient,
   MockRtlTcpClient,
 } from './mockClients.js';
 import { RtlTcpClient, RtlTcpStatus } from './rtlTcpClient.js';
@@ -59,13 +61,15 @@ type DumpClient = Dump1090Client | MockDump1090Client;
 type RtlClient = RtlTcpClient | MockRtlTcpClient;
 type KismetLikeClient = KismetClient | MockKismetClient;
 type GpsLikeClient = GpsClient | MockGpsClient;
+type KismetRidLikeClient = KismetRidClient | MockKismetRidClient;
+type BluetoothRidLikeClient = BluetoothRidClient | MockBluetoothRidClient;
 
 export class HealthMonitor extends TypedEventEmitter<HealthEvents> {
   private readonly rtlTcp: RtlClient;
   private readonly dump1090: DumpClient;
   private readonly kismet: KismetLikeClient;
-  private readonly kismetRidClient: KismetRidClient;
-  private readonly bluetoothRidClient: BluetoothRidClient;
+  private readonly kismetRidClient: KismetRidLikeClient;
+  private readonly bluetoothRidClient: BluetoothRidLikeClient;
   private readonly gps: GpsLikeClient;
   private readonly telemetryBatcher = new TelemetryBatcher<TelemetryRecord>((batch) =>
     this.flushTelemetryBatch(batch),
@@ -432,16 +436,16 @@ function createMockClients(): {
   rtlTcp: MockRtlTcpClient;
   dump1090: MockDump1090Client;
   kismet: MockKismetClient;
-  kismetRidClient: KismetRidClient;
-  bluetoothRidClient: BluetoothRidClient;
+  kismetRidClient: MockKismetRidClient;
+  bluetoothRidClient: MockBluetoothRidClient;
   gps: MockGpsClient;
 } {
   return {
     rtlTcp: new MockRtlTcpClient(),
     dump1090: new MockDump1090Client(),
     kismet: new MockKismetClient(),
-    kismetRidClient: new KismetRidClient(), // Use real client for both (returns empty array on error)
-    bluetoothRidClient: new BluetoothRidClient(), // Use real client (gracefully handles BT unavailable)
+    kismetRidClient: new MockKismetRidClient(),
+    bluetoothRidClient: new MockBluetoothRidClient(),
     gps: new MockGpsClient(),
   };
 }

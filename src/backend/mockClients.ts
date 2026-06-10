@@ -1,5 +1,6 @@
 import { setTimeout as delay } from 'node:timers/promises';
 
+import type { RemoteIdPayload } from './clients/kismetRid.js';
 import {
   ALTITUDE_MAX_FT,
   ALTITUDE_MIN_FT,
@@ -248,6 +249,52 @@ export class MockGpsClient extends TypedEventEmitter<GpsEvents> {
   }
 }
 
+export class MockKismetRidClient {
+  private readonly drones = new Map<string, DroneState>();
+
+  async fetchRemoteId(): Promise<RemoteIdPayload[]> {
+    this.pruneDrones();
+    this.populateDrones();
+    return Array.from(this.drones.values()).map(toRemoteIdPayload);
+  }
+
+  private populateDrones(): void {
+    const target = 3;
+    while (this.drones.size < target) {
+      const state = createDroneState();
+      if (!this.drones.has(state.droneId)) {
+        this.drones.set(state.droneId, state);
+      }
+    }
+    for (const state of this.drones.values()) {
+      mutateDrone(state);
+    }
+  }
+
+  private pruneDrones(): void {
+    if (this.drones.size > 1 && Math.random() < 0.05) {
+      const [droneId] = this.drones.keys();
+      this.drones.delete(droneId);
+    }
+  }
+}
+
+export class MockBluetoothRidClient {
+  async start(): Promise<void> {
+    // No hardware to initialize in mock mode.
+  }
+
+  stop(): void {
+    // Nothing to release.
+  }
+
+  getDetections(): RemoteIdPayload[] {
+    // Bluetooth detections overlap with the mock Kismet feed; keep this source empty
+    // so the merged list stays deterministic in demos.
+    return [];
+  }
+}
+
 interface AircraftState {
   hex: string;
   flight: string;
@@ -256,6 +303,69 @@ interface AircraftState {
   alt: number;
   speed: number;
   heading: number;
+}
+
+interface DroneState {
+  droneId: string;
+  manufacturer: string;
+  model: string;
+  lat: number;
+  lon: number;
+  alt: number;
+  operatorLat: number;
+  operatorLon: number;
+  speed: number;
+  heading: number;
+}
+
+function createDroneState(): DroneState {
+  const lat = randomInRange(37.7, 37.85);
+  const lon = randomInRange(-122.5, -122.35);
+  const models: Array<[string, string]> = [
+    ['DJI', 'Mavic 3'],
+    ['DJI', 'Mini 4 Pro'],
+    ['Autel', 'EVO II'],
+    ['Skydio', 'X10'],
+  ];
+  const [manufacturer, model] = models[Math.floor(Math.random() * models.length)];
+  return {
+    droneId: `MOCK-${randomHex()}`,
+    manufacturer,
+    model,
+    lat,
+    lon,
+    alt: randomInRange(30, 120),
+    operatorLat: clamp(lat + randomInRange(-0.005, 0.005), LAT_MIN, LAT_MAX),
+    operatorLon: clamp(lon + randomInRange(-0.005, 0.005), LON_MIN, LON_MAX),
+    speed: randomInRange(0, 15),
+    heading: randomInRange(0, 359),
+  };
+}
+
+function mutateDrone(state: DroneState): void {
+  state.lat = clamp(state.lat + randomInRange(-0.002, 0.002), LAT_MIN, LAT_MAX);
+  state.lon = clamp(state.lon + randomInRange(-0.002, 0.002), LON_MIN, LON_MAX);
+  state.alt = clamp(state.alt + randomInRange(-10, 10), 10, 400);
+  state.speed = clamp(state.speed + randomInRange(-2, 2), 0, 30);
+  const heading = (state.heading + randomInRange(-20, 20) + 360) % 360;
+  state.heading = clamp(Math.round(heading), HEADING_MIN_DEG, HEADING_MAX_DEG);
+}
+
+function toRemoteIdPayload(state: DroneState): RemoteIdPayload {
+  return {
+    droneId: state.droneId,
+    manufacturer: state.manufacturer,
+    model: state.model,
+    droneLat: Number(state.lat.toFixed(5)),
+    droneLon: Number(state.lon.toFixed(5)),
+    droneAltitude: Math.round(state.alt),
+    operatorLat: Number(state.operatorLat.toFixed(5)),
+    operatorLon: Number(state.operatorLon.toFixed(5)),
+    speed: Number(state.speed.toFixed(1)),
+    heading: state.heading,
+    uaType: 'UAV',
+    lastSeen: Date.now(),
+  };
 }
 
 function createAircraftState(): AircraftState {

@@ -23,7 +23,6 @@ export const TelemetryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const wsValue = useWebSocket('ws://127.0.0.1:3000/ws');
   const [cachedFrame, setCachedFrame] = useState<TelemetryFrame | null>(null);
   const [cacheTimestamp, setCacheTimestamp] = useState<number | undefined>();
-  const [isInitialized, setIsInitialized] = useState(false);
 
   // Initialize cache and load last frame on mount
   useEffect(() => {
@@ -41,11 +40,6 @@ export const TelemetryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       })
       .catch((error) => {
         console.error('[TelemetryProvider] Failed to load cache:', error);
-      })
-      .finally(() => {
-        if (mounted) {
-          setIsInitialized(true);
-        }
       });
 
     return () => {

@@ -21,7 +21,7 @@ export const MapContainer: React.FC = () => {
       return;
     }
 
-    const mapStyleId = settings?.preferences?.mapStyle || 'demotiles';
+    const mapStyleId = settings?.preferences?.mapStyle || 'offline';
 
     mapPanelRef.current = new MapPanel(containerRef.current, {
       version,

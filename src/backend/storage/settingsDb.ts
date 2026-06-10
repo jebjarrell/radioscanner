@@ -18,7 +18,7 @@ const DEFAULT_SETTINGS: Array<[string, string]> = [
 
   // User Preferences
   ['preferences.distanceUnit', 'miles'],
-  ['preferences.mapStyle', 'demotiles'],
+  ['preferences.mapStyle', 'offline'],
   ['preferences.mapDefaultCenterLat', '40.7306'],
   ['preferences.mapDefaultCenterLon', '-73.9352'],
   ['preferences.mapDefaultZoom', '9.5'],

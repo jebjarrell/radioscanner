@@ -3,7 +3,7 @@
  * Allows offline viewing of last received telemetry
  */
 
-import type { TelemetryFrame } from '../types';
+import type { TelemetryAircraft, TelemetryFrame } from '../types';
 
 const DB_NAME = 'OnTheGoScanner';
 const DB_VERSION = 1;
@@ -21,7 +21,7 @@ interface CachedFrame {
 interface CachedAircraft {
   icao: string;
   timestamp: number;
-  data: any;
+  data: TelemetryAircraft;
 }
 
 export class TelemetryCache {
@@ -171,7 +171,7 @@ export class TelemetryCache {
   /**
    * Get cached aircraft data
    */
-  async getCachedAircraft(limit: number = 200): Promise<any[]> {
+  async getCachedAircraft(limit: number = 200): Promise<TelemetryAircraft[]> {
     await this.init();
 
     if (!this.db) {
@@ -184,7 +184,7 @@ export class TelemetryCache {
       const index = store.index('timestamp');
       const request = index.openCursor(null, 'prev'); // Most recent first
 
-      const results: any[] = [];
+      const results: TelemetryAircraft[] = [];
       let count = 0;
 
       request.onsuccess = () => {

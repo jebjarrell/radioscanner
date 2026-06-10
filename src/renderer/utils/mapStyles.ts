@@ -11,6 +11,12 @@ export interface MapStyleOption {
 }
 
 export const MAP_STYLES: Record<string, MapStyleOption> = {
+  offline: {
+    id: 'offline',
+    name: 'Offline (Local Tiles)',
+    url: '/maps/style.json',
+    attribution: 'Local tiles',
+  },
   demotiles: {
     id: 'demotiles',
     name: 'MapLibre Demo Tiles',
@@ -43,8 +49,8 @@ export const MAP_STYLES: Record<string, MapStyleOption> = {
 export function getMapStyleUrl(styleId: string): string {
   const style = MAP_STYLES[styleId];
   if (!style) {
-    // Fallback to demotiles if unknown style ID
-    return MAP_STYLES.demotiles.url;
+    // Unknown ids fall back to the bundled offline style so the map renders without network
+    return MAP_STYLES.offline.url;
   }
   return style.url;
 }

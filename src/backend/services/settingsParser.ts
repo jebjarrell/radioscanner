@@ -81,7 +81,7 @@ export function parseSettings(flat: Record<string, string>): AppSettings {
       distanceUnit:
         (get('preferences.distanceUnit', 'miles') as 'miles' | 'kilometers' | 'nautical') ||
         'miles',
-      mapStyle: get('preferences.mapStyle', 'demotiles'),
+      mapStyle: get('preferences.mapStyle', 'offline'),
       mapDefaultCenterLat: getNum('preferences.mapDefaultCenterLat', 40.7306),
       mapDefaultCenterLon: getNum('preferences.mapDefaultCenterLon', -73.9352),
       mapDefaultZoom: getNum('preferences.mapDefaultZoom', 9.5),

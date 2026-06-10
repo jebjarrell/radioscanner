@@ -7,18 +7,15 @@ const CACHE_NAME = 'onthego-scanner-v1';
 const RUNTIME_CACHE = 'onthego-runtime-v1';
 
 // Assets to cache immediately on install
-const PRECACHE_ASSETS = [
-  '/',
-  '/index.html',
-  '/maps/style.json',
-];
+const PRECACHE_ASSETS = ['/', '/index.html', '/maps/style.json'];
 
 // Install event - precache core assets
 self.addEventListener('install', (event) => {
   console.log('[ServiceWorker] Install event');
 
   event.waitUntil(
-    caches.open(CACHE_NAME)
+    caches
+      .open(CACHE_NAME)
       .then((cache) => {
         console.log('[ServiceWorker] Precaching assets');
         return cache.addAll(PRECACHE_ASSETS);
@@ -29,7 +26,7 @@ self.addEventListener('install', (event) => {
       })
       .catch((error) => {
         console.error('[ServiceWorker] Precache failed:', error);
-      })
+      }),
   );
 });
 
@@ -40,7 +37,8 @@ self.addEventListener('activate', (event) => {
   const currentCaches = [CACHE_NAME, RUNTIME_CACHE];
 
   event.waitUntil(
-    caches.keys()
+    caches
+      .keys()
       .then((cacheNames) => {
         return Promise.all(
           cacheNames.map((cacheName) => {
@@ -48,13 +46,13 @@ self.addEventListener('activate', (event) => {
               console.log('[ServiceWorker] Deleting old cache:', cacheName);
               return caches.delete(cacheName);
             }
-          })
+          }),
         );
       })
       .then(() => {
         console.log('[ServiceWorker] Claiming clients');
         return self.clients.claim();
-      })
+      }),
   );
 });
 
@@ -197,10 +195,8 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'CLEAR_CACHE') {
     event.waitUntil(
       caches.keys().then((cacheNames) => {
-        return Promise.all(
-          cacheNames.map((cacheName) => caches.delete(cacheName))
-        );
-      })
+        return Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
+      }),
     );
   }
 });
