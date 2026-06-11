@@ -22,6 +22,7 @@ export class KismetClient extends TypedEventEmitter<KismetEvents> {
   private timer: NodeJS.Timeout | null = null;
   private status: KismetStatus = { available: false, ridEnabled: false };
   private bleFallbackHandler: ((data: Buffer) => void) | null = null;
+  private reportedDown = false;
 
   start(): void {
     if (this.timer) return;
@@ -70,6 +71,7 @@ export class KismetClient extends TypedEventEmitter<KismetEvents> {
 
       const status = { available: true, ridEnabled: true, lastChecked: now };
       this.status = status;
+      this.reportedDown = false;
       this.emit('status', status);
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
@@ -79,7 +81,13 @@ export class KismetClient extends TypedEventEmitter<KismetEvents> {
         lastError: error.message,
         lastChecked: Date.now(),
       };
-      this.emit('error', error);
+      // The poll loop keeps running and recovers on its own; only surface the
+      // error once per down transition so a missing Kismet doesn't spam logs
+      // every poll. Status is still emitted each cycle to drive health state.
+      if (!this.reportedDown) {
+        this.reportedDown = true;
+        this.emit('error', error);
+      }
       this.emit('status', this.status);
     } finally {
       clearTimeout(timeout);

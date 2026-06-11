@@ -5,6 +5,7 @@ import { GPSD_CONFIG } from '../config/index.js';
 import { LAT_MAX, LAT_MIN, LON_MAX, LON_MIN } from './constants.js';
 import { getManualGpsFallback } from './settings.js';
 import { clamp } from './storage/validation.js';
+import { BackoffController } from './utils/backoff.js';
 import { TypedEventEmitter } from './utils/typedEventEmitter.js';
 
 export interface GpsStatus {
@@ -30,6 +31,9 @@ type GpsEvents = {
 export class GpsClient extends TypedEventEmitter<GpsEvents> {
   private socket: net.Socket | null = null;
   private status: GpsStatus = { connected: false, lastFix: null };
+  private readonly backoff = new BackoffController();
+  private running = false;
+  private reportedDown = false;
 
   constructor(
     private readonly host = GPSD_CONFIG.host,
@@ -39,41 +43,84 @@ export class GpsClient extends TypedEventEmitter<GpsEvents> {
   }
 
   async start(): Promise<void> {
+    // Manual (re)start resets backoff so a user-triggered retry attempts
+    // immediately instead of waiting out a previously grown delay.
+    this.running = true;
+    this.reportedDown = false;
+    this.backoff.reset();
+    if (!this.socket || this.socket.destroyed) {
+      this.connect();
+    }
+  }
+
+  private connect(): void {
     if (this.socket && !this.socket.destroyed) {
       return;
     }
 
-    await new Promise<void>((resolve, reject) => {
-      const socket = net.createConnection({ host: this.host, port: this.port }, () => {
-        this.socket = socket;
-        this.status.connected = true;
-        this.status.lastChecked = Date.now();
-        socket.write('?WATCH={"enable":false}\n');
-        this.emit('connected');
-        resolve();
-      });
+    const socket = net.createConnection({ host: this.host, port: this.port }, () => {
+      this.socket = socket;
+      this.status.connected = true;
+      this.status.lastChecked = Date.now();
+      this.backoff.reset();
+      this.reportedDown = false;
+      socket.write('?WATCH={"enable":false}\n');
+      this.emit('connected');
+    });
+    this.socket = socket;
 
-      const handleError = (err: Error) => {
-        this.status.connected = false;
+    const handleDown = (err?: Error) => {
+      if (this.socket !== socket) {
+        return;
+      }
+      const wasConnected = this.status.connected;
+      this.status.connected = false;
+      this.status.lastChecked = Date.now();
+      if (err) {
         this.status.lastError = err.message;
-        this.status.lastChecked = Date.now();
-        this.emit('error', err);
-        socket.destroy();
-        reject(err);
-      };
+      }
+      socket.removeAllListeners();
+      socket.destroy();
+      this.socket = null;
 
-      socket.once('error', handleError);
-      socket.once('close', () => {
-        this.status.connected = false;
+      if (wasConnected) {
         this.emit('disconnected');
-        if (this.socket === socket) {
-          this.socket = null;
-        }
-      });
+      }
+      // Surface the error only on the transition into the down state, not on
+      // every backoff retry, so an absent gpsd doesn't spam consumers.
+      if (err && !this.reportedDown) {
+        this.emit('error', err);
+      }
+      this.scheduleReconnect();
+    };
+
+    socket.once('error', (err) => {
+      handleDown(err);
+    });
+    socket.once('close', () => {
+      handleDown();
     });
   }
 
+  private scheduleReconnect(): void {
+    if (!this.running) {
+      return;
+    }
+    // Log a single state transition when gpsd first goes down, not on every
+    // failed attempt, to keep startup-without-hardware output calm.
+    if (!this.reportedDown) {
+      this.reportedDown = true;
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn('[gpsd] connection unavailable; retrying with backoff');
+      }
+    }
+    this.backoff.schedule(() => this.connect());
+  }
+
   stop(): void {
+    this.running = false;
+    this.reportedDown = false;
+    this.backoff.cancel();
     if (this.socket) {
       this.socket.destroy();
       this.socket.removeAllListeners();

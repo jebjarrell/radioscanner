@@ -2,6 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { App } from './App';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './style.css';
 
@@ -11,7 +12,9 @@ if (root) {
   const app = createRoot(root);
   app.render(
     <React.StrictMode>
-      <App />
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
     </React.StrictMode>,
   );
 }

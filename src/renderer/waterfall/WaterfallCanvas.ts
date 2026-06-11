@@ -39,6 +39,7 @@ export class WaterfallCanvas {
 
   private writeIndex = 0;
   private rowCount = 0;
+  private workerErrored = false;
   private fftSize: number | null = null;
   private minMagnitude = Number.POSITIVE_INFINITY;
   private maxMagnitude = 0;
@@ -312,19 +313,50 @@ export class WaterfallCanvas {
   private readonly handleWorkerMessage = (event: MessageEvent): void => {
     const payload = event.data;
     if (payload && payload.error) {
-      console.error('fft.worker error:', payload.error);
+      // Log only on the transition into the error state to avoid per-frame spam.
+      if (!this.workerErrored) {
+        this.workerErrored = true;
+        console.error('[WaterfallCanvas] fft.worker reported error:', payload.error);
+      }
       return;
     }
 
     if (payload && payload.mags) {
-      const mags =
-        payload.mags instanceof Float32Array ? payload.mags : new Float32Array(payload.mags);
-      this.pushRow(mags);
+      // A valid frame means the worker recovered; log the transition back to healthy.
+      if (this.workerErrored) {
+        this.workerErrored = false;
+        console.info('[WaterfallCanvas] fft.worker recovered, resuming render.');
+      }
+
+      let mags: Float32Array;
+      try {
+        mags = payload.mags instanceof Float32Array ? payload.mags : new Float32Array(payload.mags);
+      } catch (err) {
+        if (!this.workerErrored) {
+          this.workerErrored = true;
+          console.error('[WaterfallCanvas] Failed to read fft.worker payload:', err);
+        }
+        return;
+      }
+
+      // Never let a single bad frame break the render loop.
+      try {
+        this.pushRow(mags);
+      } catch (err) {
+        if (!this.workerErrored) {
+          this.workerErrored = true;
+          console.error('[WaterfallCanvas] Failed to render fft.worker frame:', err);
+        }
+      }
     }
   };
 
   private readonly handleWorkerError = (event: ErrorEvent): void => {
-    console.error('fft.worker encountered an error event:', event.message);
+    // Worker 'error' events fire on uncaught worker exceptions; log once per error state.
+    if (!this.workerErrored) {
+      this.workerErrored = true;
+      console.error('[WaterfallCanvas] fft.worker error event:', event.message);
+    }
   };
   private createRing(size: number): RingBufferSlot[] {
     return new Array<RingBufferSlot>(size).fill(null);

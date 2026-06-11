@@ -40,10 +40,21 @@ interface KismetUavDevice {
 export class KismetRidClient {
   private readonly uavDevicesUrl: string;
   private readonly fetchTimeout = 2000; // 2 second timeout
+  // fetchRemoteId() is called once per telemetry frame (~1Hz) and already
+  // degrades gracefully by returning []. Track the down state so failures are
+  // logged only on transition instead of every second.
+  private reportedDown = false;
 
   constructor(private readonly baseUrl = KISMET_CONFIG.baseUrl) {
     // Kismet UAV devices endpoint
     this.uavDevicesUrl = `${this.baseUrl}/phy/phyuav/devices.json`;
+  }
+
+  private noteDown(message: string): void {
+    if (!this.reportedDown) {
+      this.reportedDown = true;
+      console.warn(`Kismet UAV API unavailable: ${message}`);
+    }
   }
 
   /**
@@ -64,29 +75,26 @@ export class KismetRidClient {
       clearTimeout(timeout);
 
       if (!response.ok) {
-        console.warn(`Kismet UAV API returned status ${response.status}`);
+        this.noteDown(`status ${response.status}`);
         return [];
       }
 
       const devices = (await response.json()) as KismetUavDevice[];
 
       if (!Array.isArray(devices)) {
-        console.warn('Kismet UAV API returned non-array response');
+        this.noteDown('non-array response');
         return [];
       }
 
+      this.reportedDown = false;
       return devices
         .filter((device) => this.isValidUavDevice(device))
         .map((device) => this.mapToRemoteIdPayload(device));
     } catch (error) {
       if (error instanceof Error) {
-        if (error.name === 'AbortError') {
-          console.warn('Kismet UAV API request timeout');
-        } else {
-          console.error('Kismet UAV API error:', error.message);
-        }
+        this.noteDown(error.name === 'AbortError' ? 'request timeout' : error.message);
       } else {
-        console.error('Kismet UAV API unknown error:', error);
+        this.noteDown(String(error));
       }
       return [];
     }

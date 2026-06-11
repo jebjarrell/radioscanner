@@ -99,6 +99,7 @@ export class Dump1090Client extends TypedEventEmitter<Dump1090Events> {
   private timer: NodeJS.Timeout | null = null;
   private status: Dump1090Status = { healthy: false };
   private lastSnapshot: Dump1090Snapshot | null = null;
+  private reportedDown = false;
 
   constructor(private readonly url = DEFAULT_URL) {
     super();
@@ -156,11 +157,18 @@ export class Dump1090Client extends TypedEventEmitter<Dump1090Events> {
       const snapshot: Dump1090Snapshot = { aircraft, now };
       this.lastSnapshot = snapshot;
       this.status = { healthy: true, lastUpdated: now };
+      this.reportedDown = false;
       this.emit('data', snapshot);
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       this.status = { healthy: false, lastError: error.message };
-      this.emit('error', error);
+      // The poll loop keeps running and recovers on its own; only surface the
+      // error once per down transition so a missing dump1090 doesn't spam logs
+      // every second.
+      if (!this.reportedDown) {
+        this.reportedDown = true;
+        this.emit('error', error);
+      }
     } finally {
       clearTimeout(timeout);
     }

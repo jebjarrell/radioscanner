@@ -27,12 +27,37 @@ interface CachedAircraft {
 export class TelemetryCache {
   private db: IDBDatabase | null = null;
   private initPromise: Promise<void> | null = null;
+  /**
+   * Set to false once IndexedDB is known to be unavailable (missing API,
+   * blocked, or open failure). When disabled the cache becomes a no-op so the
+   * app keeps working fully without it, and we never retry-loop on a broken DB.
+   */
+  private available = true;
 
   /**
-   * Initialize the IndexedDB database
+   * Whether the cache is currently usable. When false, all operations degrade
+   * to no-ops rather than throwing.
+   */
+  isAvailable(): boolean {
+    return this.available;
+  }
+
+  private disable(reason: string, error?: unknown): void {
+    if (this.available) {
+      console.warn(`[TelemetryCache] Disabling cache (degrading gracefully): ${reason}`, error);
+    }
+    this.available = false;
+    this.db = null;
+  }
+
+  /**
+   * Initialize the IndexedDB database.
+   *
+   * Never rejects: on any failure the cache is permanently disabled and the
+   * promise resolves so callers can proceed without the cache.
    */
   async init(): Promise<void> {
-    if (this.db) {
+    if (this.db || !this.available) {
       return;
     }
 
@@ -40,16 +65,40 @@ export class TelemetryCache {
       return this.initPromise;
     }
 
-    this.initPromise = new Promise((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
+    this.initPromise = new Promise<void>((resolve) => {
+      // indexedDB may be undefined (e.g. unavailable) and open() can throw.
+      if (typeof indexedDB === 'undefined' || indexedDB === null) {
+        this.disable('IndexedDB API unavailable');
+        resolve();
+        return;
+      }
+
+      let request: IDBOpenDBRequest;
+      try {
+        request = indexedDB.open(DB_NAME, DB_VERSION);
+      } catch (error) {
+        this.disable('indexedDB.open threw', error);
+        resolve();
+        return;
+      }
 
       request.onerror = () => {
-        console.error('[TelemetryCache] Failed to open database:', request.error);
-        reject(request.error);
+        this.disable('failed to open database', request.error);
+        resolve();
+      };
+
+      // Fires when the open is blocked by another connection; degrade rather
+      // than hang forever waiting for success.
+      request.onblocked = () => {
+        this.disable('database open blocked');
+        resolve();
       };
 
       request.onsuccess = () => {
         this.db = request.result;
+        // If the connection is force-closed later (e.g. version change), disable
+        // so subsequent operations no-op instead of throwing.
+        this.db.onclose = () => this.disable('database connection closed unexpectedly');
         console.log('[TelemetryCache] Database opened successfully');
         resolve();
       };
@@ -86,11 +135,20 @@ export class TelemetryCache {
     await this.init();
 
     if (!this.db) {
-      throw new Error('Database not initialized');
+      // Cache unavailable; degrade silently so the app keeps working.
+      return;
     }
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([TELEMETRY_STORE, AIRCRAFT_STORE], 'readwrite');
+    return new Promise((resolve) => {
+      let transaction: IDBTransaction;
+      try {
+        transaction = this.db!.transaction([TELEMETRY_STORE, AIRCRAFT_STORE], 'readwrite');
+      } catch (error) {
+        this.disable('failed to open write transaction', error);
+        resolve();
+        return;
+      }
+
       const telemetryStore = transaction.objectStore(TELEMETRY_STORE);
       const aircraftStore = transaction.objectStore(AIRCRAFT_STORE);
 
@@ -130,7 +188,8 @@ export class TelemetryCache {
 
       transaction.onerror = () => {
         console.error('[TelemetryCache] Transaction error:', transaction.error);
-        reject(transaction.error);
+        // A write failure shouldn't reject into callers; just skip this frame.
+        resolve();
       };
     });
   }
@@ -145,8 +204,16 @@ export class TelemetryCache {
       return null;
     }
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(TELEMETRY_STORE, 'readonly');
+    return new Promise((resolve) => {
+      let transaction: IDBTransaction;
+      try {
+        transaction = this.db!.transaction(TELEMETRY_STORE, 'readonly');
+      } catch (error) {
+        this.disable('failed to open read transaction', error);
+        resolve(null);
+        return;
+      }
+
       const store = transaction.objectStore(TELEMETRY_STORE);
       const index = store.index('timestamp');
       const request = index.openCursor(null, 'prev'); // Get most recent
@@ -163,7 +230,7 @@ export class TelemetryCache {
 
       request.onerror = () => {
         console.error('[TelemetryCache] Failed to get last frame:', request.error);
-        reject(request.error);
+        resolve(null);
       };
     });
   }
@@ -178,8 +245,16 @@ export class TelemetryCache {
       return [];
     }
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(AIRCRAFT_STORE, 'readonly');
+    return new Promise((resolve) => {
+      let transaction: IDBTransaction;
+      try {
+        transaction = this.db!.transaction(AIRCRAFT_STORE, 'readonly');
+      } catch (error) {
+        this.disable('failed to open read transaction', error);
+        resolve([]);
+        return;
+      }
+
       const store = transaction.objectStore(AIRCRAFT_STORE);
       const index = store.index('timestamp');
       const request = index.openCursor(null, 'prev'); // Most recent first
@@ -201,7 +276,7 @@ export class TelemetryCache {
 
       request.onerror = () => {
         console.error('[TelemetryCache] Failed to get cached aircraft:', request.error);
-        reject(request.error);
+        resolve(results);
       };
     });
   }
@@ -216,8 +291,15 @@ export class TelemetryCache {
       return;
     }
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([TELEMETRY_STORE, AIRCRAFT_STORE], 'readwrite');
+    return new Promise((resolve) => {
+      let transaction: IDBTransaction;
+      try {
+        transaction = this.db!.transaction([TELEMETRY_STORE, AIRCRAFT_STORE], 'readwrite');
+      } catch (error) {
+        this.disable('failed to open clear transaction', error);
+        resolve();
+        return;
+      }
 
       transaction.objectStore(TELEMETRY_STORE).clear();
       transaction.objectStore(AIRCRAFT_STORE).clear();
@@ -229,7 +311,7 @@ export class TelemetryCache {
 
       transaction.onerror = () => {
         console.error('[TelemetryCache] Failed to clear cache:', transaction.error);
-        reject(transaction.error);
+        resolve();
       };
     });
   }
@@ -244,8 +326,15 @@ export class TelemetryCache {
       return { frameCount: 0, aircraftCount: 0 };
     }
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([TELEMETRY_STORE, AIRCRAFT_STORE], 'readonly');
+    return new Promise((resolve) => {
+      let transaction: IDBTransaction;
+      try {
+        transaction = this.db!.transaction([TELEMETRY_STORE, AIRCRAFT_STORE], 'readonly');
+      } catch (error) {
+        this.disable('failed to open stats transaction', error);
+        resolve({ frameCount: 0, aircraftCount: 0 });
+        return;
+      }
 
       const telemetryCountRequest = transaction.objectStore(TELEMETRY_STORE).count();
       const aircraftCountRequest = transaction.objectStore(AIRCRAFT_STORE).count();
@@ -267,7 +356,7 @@ export class TelemetryCache {
 
       transaction.onerror = () => {
         console.error('[TelemetryCache] Failed to get stats:', transaction.error);
-        reject(transaction.error);
+        resolve({ frameCount, aircraftCount });
       };
     });
   }
