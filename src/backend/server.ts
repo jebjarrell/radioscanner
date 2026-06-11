@@ -177,7 +177,16 @@ function toAircraftRecord(
   };
 }
 
-async function buildServer(): Promise<FastifyInstance> {
+interface BuildServerOptions {
+  /** When false, the server is built but server.listen() is not called. Defaults to true. */
+  listen?: boolean;
+  /** When false, process signal handlers and process.exit are not registered. Defaults to true. */
+  installProcessHandlers?: boolean;
+}
+
+export async function buildServer(options: BuildServerOptions = {}): Promise<FastifyInstance> {
+  const shouldListen = options.listen ?? true;
+  const installProcessHandlers = options.installProcessHandlers ?? true;
   const server = Fastify({ logger: false });
 
   await server.register(cors, {
@@ -634,7 +643,7 @@ async function buildServer(): Promise<FastifyInstance> {
 
   broadcastTimer = setInterval(broadcast, BROADCAST_MS);
 
-  const shutdown = async (signal?: NodeJS.Signals | string, code = 0) => {
+  const shutdown = async (signal?: NodeJS.Signals | string, code = 0, exit = true) => {
     if (shuttingDown) {
       return;
     }
@@ -704,33 +713,101 @@ async function buildServer(): Promise<FastifyInstance> {
     if (signal && process.env.NODE_ENV !== 'production') {
       console.info(`[backend] exiting via ${signal}`);
     }
-    process.exit(code);
+    if (exit) {
+      process.exit(code);
+    }
   };
 
-  process.on('SIGTERM', () => {
-    void shutdown('SIGTERM');
-  });
-  process.on('SIGINT', () => {
-    void shutdown('SIGINT');
-  });
-  process.on('uncaughtException', (err) => {
-    console.error('[backend] uncaught exception', err);
-    void shutdown('uncaughtException', 1);
-  });
-
-  const port = Number.parseInt(process.env.BACKEND_PORT ?? '', 10) || DEFAULT_PORT;
-
-  try {
-    await server.listen({ host: BACKEND_HOST, port });
-    if (process.env.NODE_ENV !== 'production') {
-      console.info(`[backend] listening on http://${BACKEND_HOST}:${port}`);
+  // Expose a test-friendly cleanup that tears everything down without exiting the process.
+  server.addHook('onClose', async () => {
+    if (shuttingDown) {
+      return;
     }
-  } catch (err) {
-    console.error('[backend] failed to start server', err);
-    await shutdown('startup-error', 1);
+    if (broadcastTimer) {
+      clearInterval(broadcastTimer);
+      broadcastTimer = null;
+    }
+    for (const client of clients) {
+      try {
+        client.close();
+      } catch {
+        // ignore
+      }
+    }
+    clients.clear();
+    try {
+      aircraftBatcher.dispose();
+    } catch {
+      // ignore
+    }
+    try {
+      await rfController.stop();
+      latestRfFrame = null;
+    } catch {
+      // ignore
+    }
+    try {
+      healthMonitor.stop();
+    } catch {
+      // ignore
+    }
+    try {
+      sessionDb.close();
+    } catch {
+      // ignore
+    }
+    try {
+      settingsDb.close();
+    } catch {
+      // ignore
+    }
+    shuttingDown = true;
+  });
+
+  if (installProcessHandlers) {
+    process.on('SIGTERM', () => {
+      void shutdown('SIGTERM');
+    });
+    process.on('SIGINT', () => {
+      void shutdown('SIGINT');
+    });
+    process.on('uncaughtException', (err) => {
+      console.error('[backend] uncaught exception', err);
+      void shutdown('uncaughtException', 1);
+    });
+  }
+
+  const parsedPort = Number.parseInt(process.env.BACKEND_PORT ?? '', 10);
+  // Honor an explicit 0 (ephemeral port) while still defaulting when unset/invalid.
+  const port = Number.isInteger(parsedPort) && parsedPort >= 0 ? parsedPort : DEFAULT_PORT;
+
+  if (shouldListen) {
+    try {
+      await server.listen({ host: BACKEND_HOST, port });
+      if (process.env.NODE_ENV !== 'production') {
+        console.info(`[backend] listening on http://${BACKEND_HOST}:${port}`);
+      }
+    } catch (err) {
+      console.error('[backend] failed to start server', err);
+      await shutdown('startup-error', 1);
+    }
+  } else {
+    await server.ready();
   }
 
   return server;
 }
 
-void buildServer();
+// Auto-start the server only when run directly as the CLI entry, not when imported.
+const isMain = (() => {
+  try {
+    const entry = process.argv[1] ? path.resolve(process.argv[1]) : '';
+    return Boolean(entry) && import.meta.url === `file://${entry}`;
+  } catch {
+    return false;
+  }
+})();
+
+if (isMain) {
+  void buildServer();
+}
