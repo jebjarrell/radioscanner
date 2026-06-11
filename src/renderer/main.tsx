@@ -19,11 +19,19 @@ if (root) {
   );
 }
 
-// Register Service Worker for offline caching
-if ('serviceWorker' in navigator) {
+// Register Service Worker for offline caching.
+//
+// Only register for production builds served over http(s). The service worker
+// is skipped when:
+//   - running under `vite dev` (import.meta.env.DEV) so it never interferes
+//     with HMR or the test environment;
+//   - the page is loaded from `file://` (packaged Electron uses loadFile), where
+//     service workers cannot register and are unnecessary because all static
+//     assets already load directly from local disk.
+if (import.meta.env.PROD && 'serviceWorker' in navigator && window.location.protocol !== 'file:') {
   window.addEventListener('load', () => {
     navigator.serviceWorker
-      .register('/service-worker.js')
+      .register('./service-worker.js')
       .then((registration) => {
         console.log('[App] ServiceWorker registered:', registration.scope);
 

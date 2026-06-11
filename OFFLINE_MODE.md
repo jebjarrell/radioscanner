@@ -18,12 +18,21 @@ OnTheGo Scanner is designed to operate **fully offline** on Linux systems. The a
 
 **Status:** Offline-ready with basic fallback
 
-The app no longer depends on external map tile servers. It uses a local map style with:
+The app no longer depends on external map tile servers. The default map style id
+is `offline`, which resolves to the bundled `public/maps/style.json`:
 
-- **Current:** Dark background fallback (always works offline)
+- **Current:** Dark background fallback (a single `background` layer; always
+  works offline with **zero** network requests — no sprite, glyph, or tile URLs)
 - **Optional:** Add your own MBTiles for detailed maps (see [Adding Map Tiles](#adding-map-tiles))
 
 **File:** `public/maps/style.json`
+
+`public/maps/` is copied verbatim into `dist/maps/` by Vite at build time. In
+packaged Electron builds the renderer is loaded via `loadFile(dist/index.html)`
+over the `file://` protocol, so the root-absolute style URL (`/maps/style.json`)
+is rewritten to a document-relative path (`./maps/style.json`) by
+`resolveMapStyleUrl` in `src/renderer/utils/mapStyles.ts`. During development the
+Vite dev server serves the same file from `/maps/style.json`.
 
 ### 2. Static Asset Caching
 
@@ -37,9 +46,23 @@ A Service Worker caches all static assets:
 
 **Implementation:**
 - Service Worker: `/public/service-worker.js`
-- Registration: `src/renderer/main.tsx:19-36`
+- Registration: `src/renderer/main.tsx`
 
-The app will load instantly from cache when offline, even after restarts.
+The service worker is registered **only** for production builds served over
+http(s). It is intentionally **not** registered when:
+
+- running under `vite dev` (so it never interferes with HMR or the test suite), or
+- the page is loaded from `file://` (the packaged Electron app), where service
+  workers cannot register and are unnecessary — all static assets already load
+  directly from local disk.
+
+The precache list contains only stable, unhashed URLs (`/`, `/index.html`,
+`/maps/style.json`). Content-hashed JS/CSS bundles are cached at runtime via a
+cache-first strategy keyed on `request.destination`, so the cache never goes
+stale when asset hashes change between builds.
+
+When active (http(s) production serve), the app will load instantly from cache
+when offline, even after restarts.
 
 ### 3. Telemetry Data Caching
 
@@ -101,6 +124,20 @@ This simulates all services with synthetic data.
 ## Adding Map Tiles
 
 To add proper offline map tiles instead of the dark background:
+
+### Helper scripts
+
+Two helper scripts under `scripts/` automate most of the steps below:
+
+- `scripts/download-tiles.sh` — guides you through obtaining pre-generated
+  OpenMapTiles for the US (manual download) or generating them locally with
+  TileMaker, then installs them at `public/maps/tiles.mbtiles`.
+- `scripts/setup-offline-maps.sh` — switches `public/maps/style.json` between the
+  dark-background-only style and the vector style (`public/maps/style-vector.json`)
+  that consumes `tiles.mbtiles`.
+
+Both are plain Bash and prompt interactively. See `public/maps/README.md` and
+`docs/MAP_TILES_GUIDE.md` for full details.
 
 ### Option 1: Quick Start (Pre-generated Tiles)
 

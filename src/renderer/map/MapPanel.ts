@@ -8,7 +8,7 @@ import {
 } from '../../types/services.js';
 import type { Drone } from '../features/drone/types.js';
 import type { TelemetryAircraft, TelemetryFrame, TelemetryHealthSnapshot } from '../types.js';
-import { getMapStyleUrl } from '../utils/mapStyles.js';
+import { resolveMapStyleUrl } from '../utils/mapStyles.js';
 import { WaterfallCanvas } from '../waterfall/WaterfallCanvas.js';
 
 type LayerKey = 'aircraft' | 'drones' | 'signals' | 'waterfall';
@@ -345,7 +345,7 @@ export class MapPanel {
         this.syncDroneMarkers(this.currentDrones);
       }
     });
-    this.map.setStyle(getMapStyleUrl(styleId));
+    this.map.setStyle(resolveMapStyleUrl(styleId));
   }
 
   public isLayerEnabled(layer: LayerKey): boolean {
@@ -362,7 +362,7 @@ export class MapPanel {
   private createMap(): MapLibreMap {
     const map = new MapLibreMap({
       container: this.mapContainer,
-      style: getMapStyleUrl(this.mapStyleId),
+      style: resolveMapStyleUrl(this.mapStyleId),
       center: MAP_DEFAULT_CENTER,
       zoom: DEFAULT_ZOOM,
       attributionControl: false,

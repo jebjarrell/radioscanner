@@ -5,28 +5,13 @@
     "maputnik:renderer": "maplibre",
     "openmaptiles:version": "3.x"
   },
-  "sources": {
-    "simple-background": {
-      "type": "raster",
-      "tiles": [],
-      "tileSize": 256
-    }
-  },
-  "sprite": "",
-  "glyphs": "",
+  "sources": {},
   "layers": [
     {
       "id": "background",
       "type": "background",
       "paint": {
         "background-color": "#1a1a1a"
-      }
-    },
-    {
-      "id": "grid",
-      "type": "background",
-      "paint": {
-        "background-pattern": ""
       }
     }
   ]

@@ -61,3 +61,22 @@ export function getMapStyleUrl(styleId: string): string {
 export function getAvailableStyleIds(): string[] {
   return Object.keys(MAP_STYLES);
 }
+
+/**
+ * Resolve a map style URL for the current runtime.
+ *
+ * The bundled offline style is configured with a root-absolute path
+ * (`/maps/style.json`) which works under the dev server and any http(s)
+ * origin. In packaged Electron builds the renderer is loaded from
+ * `file://.../dist/index.html`, where a root-absolute path resolves to
+ * `file:///maps/style.json` and fails. Rewrite local root-absolute paths to
+ * be document-relative so the bundled `dist/maps/` assets load offline.
+ */
+export function resolveMapStyleUrl(styleId: string): string {
+  const url = getMapStyleUrl(styleId);
+  const isFileProtocol = typeof window !== 'undefined' && window.location?.protocol === 'file:';
+  if (isFileProtocol && url.startsWith('/')) {
+    return `.${url}`;
+  }
+  return url;
+}

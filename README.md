@@ -24,8 +24,13 @@ The renderer dependency matrix (All Services / RF-only / Localize-only / Offline
 
 **OnTheGo Scanner operates fully offline** with no external network dependencies. The app includes:
 
-- ✅ **Local map tiles** - No CDN required (basic dark background fallback, optional MBTiles)
-- ✅ **Service Worker caching** - Static assets cached for instant offline loading
+- ✅ **Local map tiles** - No CDN required. The default `offline` map style
+  (`public/maps/style.json`) renders a dark background with zero network
+  requests; add optional MBTiles for detailed maps.
+- ✅ **Service Worker caching** - Static assets cached for instant offline
+  loading on http(s) production builds. (In the packaged Electron app the
+  renderer loads over `file://`, so assets already come straight from local disk
+  and the service worker is intentionally skipped.)
 - ✅ **IndexedDB telemetry cache** - Last received data persists between sessions
 - ✅ **SQLite persistence** - Aircraft and signal data stored locally
 - ✅ **Smart UI indicators** - Shows when displaying cached vs. live data
