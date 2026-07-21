@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import net from 'node:net';
 import path from 'node:path';
 import process from 'node:process';
 
@@ -516,26 +517,31 @@ async function buildServer(): Promise<FastifyInstance> {
       return;
     }
 
+    const { host, port } = body;
     const startTime = Date.now();
     try {
-      // Simple TCP connection test
-      const url = `http://${body.host}:${body.port}`;
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
-
-      const response = await fetch(url, {
-        method: 'HEAD',
-        signal: controller.signal,
+      // Raw TCP connect probe: works for HTTP services (dump1090, Kismet) and
+      // plain-socket services (rtl_tcp, gpsd) alike; an HTTP request would
+      // report raw-TCP services as down and a 404 as a failure.
+      await new Promise<void>((resolve, rejectProbe) => {
+        const socket = net.connect({ host, port });
+        const timer = setTimeout(() => {
+          socket.destroy();
+          rejectProbe(new Error('Connection timed out'));
+        }, 5000);
+        socket.once('connect', () => {
+          clearTimeout(timer);
+          socket.end();
+          resolve();
+        });
+        socket.once('error', (err) => {
+          clearTimeout(timer);
+          socket.destroy();
+          rejectProbe(err);
+        });
       });
 
-      clearTimeout(timeout);
-      const latencyMs = Date.now() - startTime;
-
-      return {
-        success: response.ok,
-        latencyMs,
-        error: response.ok ? undefined : `HTTP ${response.status}`,
-      };
+      return { success: true, latencyMs: Date.now() - startTime };
     } catch (err) {
       const latencyMs = Date.now() - startTime;
       const error = err instanceof Error ? err.message : 'Connection failed';

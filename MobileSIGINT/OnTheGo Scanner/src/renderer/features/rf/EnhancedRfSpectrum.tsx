@@ -202,10 +202,11 @@ export const EnhancedRfSpectrum: React.FC<Props> = ({ frame }) => {
     ctx.font = '10px monospace';
     ctx.textAlign = 'center';
 
-    // Draw 5 frequency labels
-    for (let i = 0; i <= 5; i++) {
-      const freq = startHz + (i / 5) * (endHz - startHz);
-      const xPos = x + (i / 5) * w;
+    // Label count adapts to width so ~80px-wide labels never overlap
+    const divisions = Math.max(2, Math.min(5, Math.floor(w / 85)));
+    for (let i = 0; i <= divisions; i++) {
+      const freq = startHz + (i / divisions) * (endHz - startHz);
+      const xPos = x + (i / divisions) * w;
       ctx.fillText(formatFrequency(freq), xPos, y + h + 18);
     }
 

@@ -35,7 +35,14 @@ export const useWebSocket = (url: string) => {
             if (!payload) {
               return;
             }
-            setTelemetry(JSON.parse(payload) as TelemetryFrame);
+            const parsed = JSON.parse(payload) as Record<string, unknown>;
+            // The socket also carries tagged envelopes (e.g. rf_spectrum);
+            // only untagged frames are telemetry. Treating an envelope as a
+            // telemetry frame clobbers state with a shape consumers can't read.
+            if (parsed && typeof parsed === 'object' && 'type' in parsed) {
+              return;
+            }
+            setTelemetry(parsed as unknown as TelemetryFrame);
           } catch (err) {
             console.error('Bad telemetry frame', err);
           }

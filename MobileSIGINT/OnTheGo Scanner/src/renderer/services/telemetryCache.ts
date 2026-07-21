@@ -13,7 +13,7 @@ const MAX_TELEMETRY_FRAMES = 10; // Keep last 10 frames
 const MAX_AIRCRAFT_RECORDS = 500; // Keep last 500 aircraft records
 
 interface CachedFrame {
-  id: number;
+  id?: number; // assigned by IndexedDB autoIncrement — never set explicitly
   timestamp: number;
   data: TelemetryFrame;
 }
@@ -95,8 +95,9 @@ export class TelemetryCache {
       const aircraftStore = transaction.objectStore(AIRCRAFT_STORE);
 
       // Save telemetry frame
+      // No explicit id: with an in-line keyPath, a provided key would override
+      // autoIncrement and every frame after the first would collide.
       const cachedFrame: CachedFrame = {
-        id: 0, // Will be auto-incremented
         timestamp: Date.now(),
         data: frame,
       };

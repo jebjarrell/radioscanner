@@ -128,20 +128,20 @@ export const EnhancedRfWaterfall: React.FC<Props> = ({ frame }) => {
     ctx.font = '10px monospace';
     ctx.textAlign = 'center';
 
-    // Draw frequency labels
-    for (let i = 0; i <= 5; i++) {
-      const freq = startHz + (i / 5) * (endHz - startHz);
-      const xPos = (i / 5) * width;
-      const label = formatFrequency(freq);
-      ctx.fillText(label, xPos, 18);
+    // Label count adapts to width so ~80px-wide labels never overlap
+    const divisions = Math.max(2, Math.min(5, Math.floor(width / 85)));
+    for (let i = 0; i <= divisions; i++) {
+      const freq = startHz + (i / divisions) * (endHz - startHz);
+      const xPos = (i / divisions) * width;
+      ctx.fillText(formatFrequency(freq), xPos, 18);
     }
 
     // Tick marks
     ctx.strokeStyle = '#666';
     ctx.lineWidth = 1;
 
-    for (let i = 0; i <= 5; i++) {
-      const xPos = (i / 5) * width;
+    for (let i = 0; i <= divisions; i++) {
+      const xPos = (i / divisions) * width;
       ctx.beginPath();
       ctx.moveTo(xPos, 0);
       ctx.lineTo(xPos, 5);
