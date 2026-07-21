@@ -632,7 +632,13 @@ async function buildServer(): Promise<FastifyInstance> {
     reply.send({ success });
   });
 
-  broadcastTimer = setInterval(broadcast, BROADCAST_MS);
+  // Broadcast cadence comes from performance.telemetryUpdateInterval
+  // (restart-applied; see requiresRestart in settingsParser)
+  const resolveBroadcastMs = (): number => {
+    const raw = Number(settingsDb.getAll()['performance.telemetryUpdateInterval']);
+    return Number.isFinite(raw) && raw >= 500 && raw <= 5000 ? raw : BROADCAST_MS;
+  };
+  broadcastTimer = setInterval(broadcast, resolveBroadcastMs());
 
   const shutdown = async (signal?: NodeJS.Signals | string, code = 0) => {
     if (shuttingDown) {

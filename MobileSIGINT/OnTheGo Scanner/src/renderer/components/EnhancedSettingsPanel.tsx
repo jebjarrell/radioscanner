@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 
 import { useToast } from '../contexts/ToastContext';
 import { useSettings } from '../hooks/useSettings';
+import { validateSettingUpdates } from '../utils/settingsValidation';
 
-type TabId = 'services' | 'preferences' | 'notifications' | 'performance';
+type TabId = 'services' | 'preferences' | 'notifications' | 'performance' | 'session';
 
 interface EnhancedSettingsPanelProps {
   isOpen: boolean;
@@ -45,6 +46,12 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
   const handleSave = async () => {
     if (Object.keys(pendingChanges).length === 0) {
       showToast('No changes to save', 'info');
+      return;
+    }
+
+    const validationErrors = validateSettingUpdates(pendingChanges);
+    if (validationErrors.length > 0) {
+      validationErrors.slice(0, 3).forEach((error) => showToast(error, 'error', 6000));
       return;
     }
 
@@ -151,6 +158,13 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
             onClick={() => setActiveTab('performance')}
           >
             Performance
+          </button>
+          <button
+            type="button"
+            className={`settings-tab ${activeTab === 'session' ? 'settings-tab--active' : ''}`}
+            onClick={() => setActiveTab('session')}
+          >
+            Session
           </button>
         </div>
 
@@ -596,6 +610,40 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
                 onClick={() => handleReset('performance')}
               >
                 Reset Performance to Defaults
+              </button>
+            </div>
+          )}
+
+          {activeTab === 'session' && (
+            <div className="settings-section">
+              <h3>Session Storage</h3>
+              <p className="settings-description">
+                Choose where session telemetry (aircraft tracks, detections) is stored. Changes
+                require application restart.
+              </p>
+
+              <div className="settings-group">
+                <label className="settings-label">Storage Mode</label>
+                <select
+                  className="settings-select"
+                  value={getValue('session.storageMode', 'memory')}
+                  onChange={(e) => handleChange('session.storageMode', e.target.value)}
+                >
+                  <option value="memory">In-Memory (cleared on exit)</option>
+                  <option value="disk">Disk-Backed (persists across restarts)</option>
+                </select>
+                <p className="settings-hint">
+                  In-memory is faster and leaves no session data on disk; disk-backed retains
+                  telemetry between runs.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="settings-btn settings-btn--reset"
+                onClick={() => handleReset('session')}
+              >
+                Reset Session to Defaults
               </button>
             </div>
           )}

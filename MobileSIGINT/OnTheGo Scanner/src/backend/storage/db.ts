@@ -27,10 +27,15 @@ const resolveSessionDbPath = (): string => {
     return process.env.SESSION_DB_FILE;
   }
   try {
-    const row = settingsDb
-      .prepare(`SELECT value FROM user_settings WHERE key = ?`)
-      .get('session_storage_mode') as { value: string } | undefined;
-    const mode = row?.value === 'disk' ? 'disk' : 'memory';
+    const readMode = (key: string): string | undefined =>
+      (
+        settingsDb.prepare(`SELECT value FROM user_settings WHERE key = ?`).get(key) as
+          | { value: string }
+          | undefined
+      )?.value;
+    // Current key, falling back to the pre-settings-panel legacy key
+    const value = readMode('session.storageMode') ?? readMode('session_storage_mode');
+    const mode = value === 'disk' ? 'disk' : 'memory';
     if (mode === 'disk') {
       const defaultPath = path.join('.', 'data', 'session.sqlite');
       ensureDir(path.dirname(path.resolve(defaultPath)));

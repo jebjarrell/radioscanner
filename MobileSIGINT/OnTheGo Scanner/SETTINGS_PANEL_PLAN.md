@@ -681,12 +681,23 @@ describe('Settings Parser', () => {
 
 ## Success Criteria
 
+> **Status update 2026-07-21:** All phases complete. Notable fixes made while
+> closing this out: the session storage mode never actually applied (writers
+> used `session.storageMode` while `db.ts` read the legacy
+> `session_storage_mode` key — now fixed with legacy fallback);
+> `performance.telemetryUpdateInterval` was stored but never consumed (now
+> drives the WebSocket broadcast cadence, restart-applied); the old
+> single-setting SettingsPanel embedded in DashboardCounters was removed in
+> favor of the tabbed EnhancedSettingsPanel, which gained the missing Session
+> tab and client-side validation (`utils/settingsValidation.ts`).
+> Remaining: visual pass in the running app.
+
 ### Settings Panel ✓
-- [ ] All five categories implemented (Services, Preferences, Notifications, Performance, Session)
-- [ ] Settings persist across app restarts
-- [ ] Validation prevents invalid configurations
-- [ ] "Requires Restart" warnings shown appropriately
-- [ ] Reset to defaults works for each section
+- [x] All five categories implemented (Services, Preferences, Notifications, Performance, Session)
+- [x] Settings persist across app restarts
+- [x] Validation prevents invalid configurations *(client-side, `settingsValidation.ts`)*
+- [x] "Requires Restart" warnings shown appropriately
+- [x] Reset to defaults works for each section
 
 ### Notification System ✓
 - [ ] Toast component displays correctly

@@ -7,8 +7,6 @@ import { useDrones } from '../features/drone/hooks/useDrones';
 import { RF_BANDS, RF_BAND_OPTIONS, type RfBandKey } from '../features/rf/bands';
 import { useSignals } from '../hooks/useSignals';
 
-import { SettingsPanel } from './SettingsPanel';
-
 const COMMERCIAL_REGEX = /^[A-Z]{3}\d{1,4}$/;
 
 const determineSignalBand = (frequencyMHz: number): string => {
@@ -174,7 +172,6 @@ export const DashboardCounters: React.FC = () => {
             {scanning ? 'Stop Scan' : 'Start Scan'}
           </button>
         </div>
-        <SettingsPanel />
       </section>
     </div>
   );
