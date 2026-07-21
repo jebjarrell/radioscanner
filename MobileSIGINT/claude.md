@@ -20,14 +20,14 @@ The Mobile SIGINT Platform is a comprehensive vehicle-mounted RF intelligence co
 
 ## Repository Layout & Subproject Status
 
-*Last updated: 2026-07-17. All paths are relative to this `MobileSIGINT/` directory, which is the umbrella project. Legend: 🟢 working · 🟡 in progress · ⚪ dependency/dormant.*
+*Last updated: 2026-07-21. All paths are relative to this `MobileSIGINT/` directory, which is the umbrella project. Legend: 🟢 working · 🟡 in progress · ⚪ dependency/dormant.*
 
 The platform is assembled from several independently-developed subprojects, each in its own folder:
 
 | Folder | Platform Role | Stack | State |
 |--------|---------------|-------|-------|
-| `OnTheGo Scanner/` | Operator app — RF spectrum + telemetry on a map (RTL-SDR waterfall, ADS-B aircraft, drone Remote ID, GPS); offline-first | TypeScript, Electron, React/Vite, Fastify, SQLite | 🟢 **Working MVP**, being hardened to spec on branch `feature/trd-prd-compliance`. WIP: BLE drone RID (Phase 2), RF spectrum-chart polish, enhanced settings panel |
-| `Sensor Node/` | Edge sensor — passive WiFi/BLE presence detection with privacy-preserving fingerprints; reports over HaLow mesh | C, ESP-IDF (ESP32-S3), NimBLE, mbedTLS | 🟡 **Builds & runs**, all modules implemented. Untracked in git (never committed); GPS + timestamp are hardcoded stubs; dormant since May 2025 |
+| `OnTheGo Scanner/` | Operator app — RF spectrum + telemetry on a map (RTL-SDR waterfall, ADS-B aircraft, drone Remote ID, GPS); offline-first | TypeScript, Electron, React/Vite, Fastify, SQLite | 🟢 **Working MVP**, being hardened to spec on branch `feature/trd-prd-compliance`. Done 2026-07-21: BLE drone RID made F3411-22a wire-accurate (field test pending), RF spectrum/waterfall polish. WIP: enhanced settings panel |
+| `Sensor Node/` | Edge sensor — passive WiFi/BLE presence detection with privacy-preserving fingerprints; reports over HaLow mesh | C, ESP-IDF (ESP32-S3), NimBLE, mbedTLS | 🟡 **Builds & runs**, all modules implemented. Source tracked in the umbrella repo since 2026-07-21; GPS + timestamp are hardcoded stubs; dormant since May 2025 |
 | `GridDown/` | Offline services + long-range mesh — intranet server (bulletin, offline wiki, files) and HaLow mesh gateway for grid-down operation | Python/FastAPI + SQLite + Docker/Caddy; OpenWRT + BATMAN-adv | 🟡 **Late beta** (~80–95%). Own git repo; CLI mesh deploy works, no LuCI UI; last commit Dec 2025 |
 | `OSINT Extractor/` | Intelligence feed — OSINT extraction (Reddit→local LLM→geocode) plus a "bug-out" readiness dashboard (weather/fuel/advisory signals → GREEN/YELLOW/RED) | Python, llama.cpp, FastAPI, APScheduler, SQLite | 🟡 **MVP complete; v2 largely complete** and test-backed. Nested own git repo; note: v2's CLI entry point has an uncommitted deletion |
 | `mm-iot-esp32/` | Shared radio SDK — Morse Micro Wi-Fi HaLow (802.11ah) SDK; the RF foundation used by Sensor Node and GridDown's mesh | C/C++, ESP-IDF, vendor driver blobs | ⚪ **Functional vendor port** (v2.6.4), locally customized. Dependency, not an app; dormant since Jan 2025 |
@@ -39,7 +39,7 @@ The platform is assembled from several independently-developed subprojects, each
 
 > **Note on stack drift:** The subprojects above are the *actual* implemented code and differ from the originally-specified stack in this guide (e.g. the operator UI is a TypeScript/Electron app — "OnTheGo Scanner" — not the Flask `scanner-ui` described under Software Stack). Treat the phased plan and Software Stack sections as original design intent; treat this table as ground truth for what exists today.
 
-> **Git note:** The umbrella repo's `.git` (at the parent of this folder) actually holds the **OnTheGo Scanner** history, so its `git status` shows the pre-reorg root layout as deleted. `GridDown/`, `mm-iot-esp32/`, and this `MobileSIGINT/` folder each carry their own nested `.git`. Review the repo layout before running git operations.
+> **Git note:** Since the 2026-07-21 restructure, the `.git` at the parent of this folder is the single umbrella repo (it carries the OnTheGo Scanner history through the move — use `git log --follow`). `GridDown/`, `mm-iot-esp32/`, and `OSINT Extractor/` keep their own nested repos and are excluded from the umbrella via `.gitignore`. The retired near-empty `MobileSIGINT/.git` is archived local-only in `.git-archives/`.
 
 ---
 
