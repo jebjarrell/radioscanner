@@ -1,0 +1,46 @@
+CONFIG_IDF_TARGET="esp32s3"
+
+# PSRAM — XIAO ESP32-S3 Sense uses octal PSRAM
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_OCT=y
+
+# BLE — observer role only (passive scanning)
+CONFIG_BT_ENABLED=y
+CONFIG_BT_NIMBLE_ENABLED=y
+CONFIG_BT_NIMBLE_MAX_CONNECTIONS=1
+CONFIG_BT_NIMBLE_ROLE_CENTRAL=n
+CONFIG_BT_NIMBLE_ROLE_PERIPHERAL=n
+CONFIG_BT_NIMBLE_ROLE_OBSERVER=y
+CONFIG_BT_NIMBLE_ROLE_BROADCASTER=n
+
+# WiFi/BLE coexistence — required for time-sliced radio sharing
+CONFIG_SW_COEXIST_ENABLE=y
+
+# USB CDC serial console (XIAO ESP32-S3 native USB)
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+
+# FreeRTOS — required by MM-IoT-SDK
+CONFIG_FREERTOS_HZ=1000
+CONFIG_FREERTOS_TIMER_TASK_PRIORITY=10
+
+# ESP32-S3 instruction cache
+CONFIG_ESP32S3_INSTRUCTION_CACHE_32KB=y
+
+# mbedTLS — required for HaLow SAE/OWE and SHA-256 fingerprinting
+CONFIG_MBEDTLS_NIST_KW_C=y
+
+# Partition table — app needs ~1.5 MB (BLE + HaLow + mbedTLS)
+# Flash — XIAO ESP32-S3 Sense has 8 MB
+CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y
+
+# Partition table — app needs ~1.5 MB (BLE + HaLow + mbedTLS)
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# LWIP — required by mmipal status/link callbacks
+CONFIG_LWIP_NETIF_STATUS_CALLBACK=y
+
+# HaLow module (WM6180) — SPI pins use mm_shims Kconfig defaults (GPIO 1-9)
+# which match the XIAO ESP32-S3 + WM6180 plug-in wiring.
+# BCF: verify the MF part number on your module label. Options in menuconfig:
+#   mf16858_us (default), mf08651_us, mf08551, mf08251, mf03120

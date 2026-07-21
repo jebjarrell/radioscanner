@@ -1,6 +1,26 @@
-node_modules
-dist
-dist-electron
+# --- Nested repositories with their own git history (managed separately) ---
+MobileSIGINT/GridDown/
+MobileSIGINT/mm-iot-esp32/
+MobileSIGINT/OSINT Extractor/
+
+# --- Local archives of retired git repos (not for the remote) ---
+.git-archives/
+
+# --- Build outputs & dependencies ---
+node_modules/
+dist/
+dist-electron/
+build/
+managed_components/
+
+# --- Runtime data & scratch ---
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+.perf-tmp/
+.remember/
 *.log
+
+# --- OS junk ---
 Thumbs.db
 .DS_Store
