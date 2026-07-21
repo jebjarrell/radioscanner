@@ -361,6 +361,9 @@ export class HealthMonitor extends TypedEventEmitter<HealthEvents> {
         if (drone.model && !merged.model) {
           merged.model = drone.model;
         }
+        if (drone.uaType && !merged.uaType) {
+          merged.uaType = drone.uaType;
+        }
         if (drone.droneLat !== null) {
           merged.droneLat = drone.droneLat;
         }

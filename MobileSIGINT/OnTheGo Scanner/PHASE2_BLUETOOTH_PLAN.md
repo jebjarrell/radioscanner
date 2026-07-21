@@ -1,5 +1,17 @@
 # Phase 2: Bluetooth ASTM F3411 Remote ID Implementation Plan
 
+> **Status update 2026-07-21:** Parser rewritten to the real F3411-22a wire
+> format (the message layouts sketched below were simplified and are NOT
+> byte-accurate — trust `src/backend/clients/astmParser.ts` and its tests).
+> Key corrections vs. this doc: byte 0 packs `(MessageType << 4) | ProtoVersion`;
+> Basic ID byte 1 packs `(IDType << 4) | UAType`; Location carries baro/geo
+> altitude + height at offsets 13/15/17 with nibble-packed accuracy codes;
+> System carries operator lat/lon at offsets 2/6, altitude at 18 (uint16),
+> and a uint32 timestamp at 20. The BLE service data prefix
+> (`0x0D` app code + message counter) and BT5 Message Packs (type `0xF`) are
+> now handled. Remaining: field test against a real broadcast (OpenDroneID
+> simulator app or live drone) and on-hardware perf validation.
+
 ## Overview
 
 Implement full ASTM F3411 Bluetooth Remote ID support to detect all compliant drones, not just Wi-Fi broadcasting ones.
@@ -352,14 +364,14 @@ describe('BluetoothRidClient', () => {
 
 ## Success Criteria
 
-- [ ] Detects ASTM F3411 compliant drones via Bluetooth
-- [ ] Parses all 6 message types correctly
-- [ ] Merges Wi-Fi and Bluetooth detections without duplicates
-- [ ] Operator location displayed when available
-- [ ] Graceful degradation if Bluetooth unavailable
-- [ ] <10% CPU overhead
-- [ ] <20 MB memory overhead
-- [ ] Full ASTM F3411-22a compliance
+- [x] Detects ASTM F3411 compliant drones via Bluetooth *(implemented + unit-tested; needs field test with a real broadcast)*
+- [x] Parses all 6 message types correctly *(plus Message Pack 0xF; spec-accurate as of 2026-07-21)*
+- [x] Merges Wi-Fi and Bluetooth detections without duplicates
+- [x] Operator location displayed when available *(DroneDetail + MapPanel)*
+- [x] Graceful degradation if Bluetooth unavailable
+- [ ] <10% CPU overhead *(needs on-hardware profiling)*
+- [ ] <20 MB memory overhead *(needs on-hardware profiling)*
+- [x] Full ASTM F3411-22a compliance *(wire-format level; Authentication pages are parsed but not reassembled)*
 
 ## Timeline Estimate
 

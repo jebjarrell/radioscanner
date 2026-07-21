@@ -21,17 +21,39 @@ import {
   type AstmMessage,
   type AstmSystem,
   MessageType,
+  UaType,
 } from './astmParser.js';
 import type { RemoteIdPayload } from './kismetRid.js';
 
 // ASTM Remote ID service UUID
 const REMOTE_ID_SERVICE_UUID = 'fffa';
 
+// Human-readable UA type names, indexed by the ASTM UAType enum value
+const UA_TYPE_NAMES: Record<UaType, string> = {
+  [UaType.NONE]: 'Unknown',
+  [UaType.AEROPLANE]: 'Aeroplane',
+  [UaType.HELICOPTER_OR_MULTIROTOR]: 'Helicopter/Multirotor',
+  [UaType.GYROPLANE]: 'Gyroplane',
+  [UaType.HYBRID_LIFT]: 'Hybrid Lift',
+  [UaType.ORNITHOPTER]: 'Ornithopter',
+  [UaType.GLIDER]: 'Glider',
+  [UaType.KITE]: 'Kite',
+  [UaType.FREE_BALLOON]: 'Free Balloon',
+  [UaType.CAPTIVE_BALLOON]: 'Captive Balloon',
+  [UaType.AIRSHIP]: 'Airship',
+  [UaType.FREE_FALL_PARACHUTE]: 'Free Fall/Parachute',
+  [UaType.ROCKET]: 'Rocket',
+  [UaType.TETHERED_POWERED_AIRCRAFT]: 'Tethered Powered Aircraft',
+  [UaType.GROUND_OBSTACLE]: 'Ground Obstacle',
+  [UaType.OTHER]: 'Other',
+};
+
 // Drone data aggregated from multiple message types
 interface DroneData {
   address: string;
   droneId?: string;
   manufacturer?: string;
+  uaType?: UaType;
   droneLat?: number;
   droneLon?: number;
   droneAltitude?: number;
@@ -72,7 +94,10 @@ export class BluetoothRidClient {
     }
 
     try {
-      // Dynamically import noble (may fail if Bluetooth not available)
+      // Dynamically import noble (may fail if Bluetooth not available). noble is
+      // an optional native dependency that may not be installed, so its module
+      // path is intentionally unresolved at lint time.
+      // eslint-disable-next-line import/no-unresolved
       this.noble = await import('@abandonware/noble');
 
       // Set up event handlers
@@ -147,7 +172,7 @@ export class BluetoothRidClient {
         operatorLon: drone.operatorLon ?? null,
         speed: drone.speed ?? null,
         heading: drone.heading ?? null,
-        uaType: null, // Not available in ASTM F3411
+        uaType: drone.uaType !== undefined ? (UA_TYPE_NAMES[drone.uaType] ?? null) : null,
         lastSeen: drone.lastSeen,
       });
     }
@@ -204,36 +229,26 @@ export class BluetoothRidClient {
     // Look for Remote ID service data
     for (const service of advertisement.serviceData) {
       if (service.uuid.toLowerCase() === REMOTE_ID_SERVICE_UUID) {
-        this.processRemoteIdData(address, service.data);
+        this.ingestServiceData(address, service.data);
       }
     }
   }
 
   /**
-   * Process Remote ID service data
-   * Data may contain multiple 25-byte messages concatenated
+   * Ingest raw 0xFFFA service data from a BLE advertisement.
+   *
+   * Handles the ASTM BLE prefix (0x0D application code + message counter),
+   * single messages, and BT5 Message Packs. Public so tests and simulators
+   * can feed advertisements without a Bluetooth adapter.
    */
-  private processRemoteIdData(address: string, data: Buffer): void {
-    if (!data || data.length === 0) {
-      return;
-    }
-
-    // Remote ID messages are 25 bytes each
-    const messageSize = 25;
-    const messageCount = Math.floor(data.length / messageSize);
-
-    for (let i = 0; i < messageCount; i++) {
-      const offset = i * messageSize;
-      const messageBuffer = data.subarray(offset, offset + messageSize);
-
-      try {
-        const message = AstmF3411Parser.parse(messageBuffer);
-        if (message) {
-          this.processMessage(address, message);
-        }
-      } catch (error) {
-        console.warn('[BluetoothRidClient] Failed to parse message:', error);
+  ingestServiceData(address: string, data: Buffer): void {
+    try {
+      const messages = AstmF3411Parser.parseAdvertisement(data);
+      for (const message of messages) {
+        this.processMessage(address, message);
       }
+    } catch (error) {
+      console.warn('[BluetoothRidClient] Failed to parse advertisement:', error);
     }
   }
 
@@ -281,6 +296,7 @@ export class BluetoothRidClient {
   private processBasicId(drone: DroneData, message: AstmBasicId): void {
     drone.messages.basicId = message;
     drone.droneId = message.uasId;
+    drone.uaType = message.uaType;
 
     // Try to identify manufacturer from ID
     if (message.uasId.toUpperCase().startsWith('DJI')) {
@@ -299,9 +315,10 @@ export class BluetoothRidClient {
     drone.messages.location = message;
     drone.droneLat = message.latitude;
     drone.droneLon = message.longitude;
-    drone.droneAltitude = message.altitudeWgs84;
+    // Prefer geodetic (WGS84) altitude; fall back to pressure altitude
+    drone.droneAltitude = message.altitudeWgs84 ?? message.altitudeBaro ?? undefined;
     drone.speed = message.speedHorizontal;
-    drone.heading = message.direction;
+    drone.heading = message.direction ?? undefined;
   }
 
   /**
@@ -311,13 +328,14 @@ export class BluetoothRidClient {
     drone.messages.system = message;
     drone.operatorLat = message.operatorLatitude;
     drone.operatorLon = message.operatorLongitude;
-    drone.operatorAltitude = message.operatorAltitude;
+    drone.operatorAltitude = message.operatorAltitude ?? undefined;
   }
 
   /**
-   * Remove stale drone detections
+   * Remove stale drone detections.
+   * Runs on a timer while scanning; public for direct use in tests.
    */
-  private cleanupStale(): void {
+  cleanupStale(): void {
     const now = Date.now();
     const addresses = Array.from(this.drones.keys());
 
