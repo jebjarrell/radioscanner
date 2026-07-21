@@ -4,98 +4,41 @@
  * Professional spectrum analyzer with:
  * - Frequency axis with auto-scaled labels
  * - Power (dB) axis with grid lines
- * - Peak markers with tooltips
+ * - Peak markers with de-overlapped labels
  * - Hold and Max Hold features
  * - Gradient fill
- * - Anti-aliased rendering
+ * - Redraw on container resize
  *
  * @see RF_VISUALIZATION_PLAN.md
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { RfSpectrumFrame } from '../../hooks/useRfStream';
+import { formatFrequency, formatPower } from '../../utils/frequency';
 
 interface Props {
   frame: RfSpectrumFrame | null;
 }
 
-interface HoldState {
-  enabled: boolean;
-  bins: number[] | null;
-}
+const MIN_DB = -100;
+const MAX_DB = 0;
+const PEAK_LABEL_COUNT = 5;
+const PEAK_LABEL_MIN_GAP_PX = 42;
 
-interface MaxHoldState {
-  enabled: boolean;
-  bins: number[];
-}
-
-const clampDb = (value: number): number => Math.max(-100, Math.min(0, value));
-
-const formatFrequency = (hz: number): string => {
-  if (hz >= 1e9) return `${(hz / 1e9).toFixed(2)} GHz`;
-  if (hz >= 1e6) return `${(hz / 1e6).toFixed(2)} MHz`;
-  if (hz >= 1e3) return `${(hz / 1e3).toFixed(1)} kHz`;
-  return `${hz.toFixed(0)} Hz`;
-};
-
-const formatPower = (db: number): string => {
-  return `${db.toFixed(1)} dB`;
-};
+const clampDb = (value: number): number => Math.max(MIN_DB, Math.min(MAX_DB, value));
 
 export const EnhancedRfSpectrum: React.FC<Props> = ({ frame }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [hold, setHold] = useState<HoldState>({ enabled: false, bins: null });
-  const [maxHold, setMaxHold] = useState<MaxHoldState>({ enabled: false, bins: [] });
+  const frameRef = useRef<RfSpectrumFrame | null>(null);
+  const holdBinsRef = useRef<number[] | null>(null);
+  const maxHoldBinsRef = useRef<number[] | null>(null);
+  const [holdEnabled, setHoldEnabled] = useState(false);
+  const [maxHoldEnabled, setMaxHoldEnabled] = useState(false);
 
-  // Handle canvas resizing
-  useEffect(() => {
+  const draw = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas) {
-      return;
-    }
-
-    const resize = () => {
-      const dpr = window.devicePixelRatio || 1;
-      const width = canvas.clientWidth || 600;
-      const height = canvas.clientHeight || 200;
-
-      if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
-        canvas.width = Math.floor(width * dpr);
-        canvas.height = Math.floor(height * dpr);
-      }
-    };
-
-    resize();
-    window.addEventListener('resize', resize);
-    return () => window.removeEventListener('resize', resize);
-  }, []);
-
-  // Update hold state
-  useEffect(() => {
-    if (hold.enabled && frame && frame.bins.length > 0) {
-      if (!hold.bins) {
-        setHold({ enabled: true, bins: [...frame.bins] });
-      }
-    }
-  }, [hold.enabled, frame]);
-
-  // Update max hold state
-  useEffect(() => {
-    if (maxHold.enabled && frame && frame.bins.length > 0) {
-      if (maxHold.bins.length === 0) {
-        setMaxHold({ enabled: true, bins: [...frame.bins] });
-      } else {
-        const updated = frame.bins.map((val, i) => Math.max(val, maxHold.bins[i] || val));
-        setMaxHold({ enabled: true, bins: updated });
-      }
-    }
-  }, [maxHold.enabled, frame]);
-
-  // Render spectrum
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const currentFrame = frame;
+    const currentFrame = frameRef.current;
 
     if (!canvas || !currentFrame || currentFrame.bins.length === 0) {
       return;
@@ -127,10 +70,7 @@ export const EnhancedRfSpectrum: React.FC<Props> = ({ frame }) => {
     ctx.fillStyle = '#1a1a1a';
     ctx.fillRect(marginLeft, marginTop, plotWidth, plotHeight);
 
-    // Draw grid
     drawGrid(ctx, marginLeft, marginTop, plotWidth, plotHeight);
-
-    // Draw axes
     drawFrequencyAxis(
       ctx,
       currentFrame,
@@ -142,15 +82,14 @@ export const EnhancedRfSpectrum: React.FC<Props> = ({ frame }) => {
     );
     drawPowerAxis(ctx, marginLeft, marginTop, plotWidth, plotHeight);
 
-    // Get bins to display
-    const bins = currentFrame.bins;
-    const displayBins = hold.enabled && hold.bins ? hold.bins : bins;
+    const displayBins =
+      holdEnabled && holdBinsRef.current ? holdBinsRef.current : currentFrame.bins;
 
-    // Draw max hold if enabled
-    if (maxHold.enabled && maxHold.bins.length > 0) {
+    // Draw max hold trace behind the live trace
+    if (maxHoldEnabled && maxHoldBinsRef.current) {
       drawTrace(
         ctx,
-        maxHold.bins,
+        maxHoldBinsRef.current,
         marginLeft,
         marginTop,
         plotWidth,
@@ -165,20 +104,72 @@ export const EnhancedRfSpectrum: React.FC<Props> = ({ frame }) => {
     drawTrace(ctx, displayBins, marginLeft, marginTop, plotWidth, plotHeight, '#2ecc71', 2, true);
 
     // Draw peaks
-    if (currentFrame.peaks?.length && !hold.enabled) {
+    if (currentFrame.peaks?.length && !holdEnabled) {
       drawPeaks(ctx, currentFrame, displayBins, marginLeft, marginTop, plotWidth, plotHeight);
     }
 
     ctx.restore();
-  }, [frame, hold, maxHold]);
+  }, [holdEnabled, maxHoldEnabled]);
+
+  // Size the canvas backing store to its CSS box and observe container resizes
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      return;
+    }
+
+    const resize = () => {
+      const dpr = window.devicePixelRatio || 1;
+      const width = canvas.clientWidth || 600;
+      const height = canvas.clientHeight || 200;
+
+      if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
+        canvas.width = Math.floor(width * dpr);
+        canvas.height = Math.floor(height * dpr);
+        draw();
+      }
+    };
+
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(canvas);
+    return () => observer.disconnect();
+  }, [draw]);
+
+  // Ingest each new frame: update hold/max-hold accumulators, then redraw
+  useEffect(() => {
+    frameRef.current = frame;
+    if (!frame || frame.bins.length === 0) {
+      return;
+    }
+
+    if (holdEnabled && !holdBinsRef.current) {
+      holdBinsRef.current = [...frame.bins];
+    }
+
+    if (maxHoldEnabled) {
+      const prev = maxHoldBinsRef.current;
+      if (!prev || prev.length !== frame.bins.length) {
+        maxHoldBinsRef.current = [...frame.bins];
+      } else {
+        for (let i = 0; i < frame.bins.length; i++) {
+          if (frame.bins[i] > prev[i]) {
+            prev[i] = frame.bins[i];
+          }
+        }
+      }
+    }
+
+    draw();
+  }, [frame, holdEnabled, maxHoldEnabled, draw]);
 
   const drawGrid = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) => {
     ctx.strokeStyle = '#333';
     ctx.lineWidth = 0.5;
 
     // Horizontal grid lines (every 10 dB)
-    for (let db = -90; db <= 0; db += 10) {
-      const yPos = y + h - ((db + 100) / 100) * h;
+    for (let db = MIN_DB + 10; db <= MAX_DB; db += 10) {
+      const yPos = y + h - ((db - MIN_DB) / (MAX_DB - MIN_DB)) * h;
       ctx.beginPath();
       ctx.moveTo(x, yPos);
       ctx.lineTo(x + w, yPos);
@@ -197,15 +188,15 @@ export const EnhancedRfSpectrum: React.FC<Props> = ({ frame }) => {
 
   const drawFrequencyAxis = (
     ctx: CanvasRenderingContext2D,
-    frame: RfSpectrumFrame,
+    currentFrame: RfSpectrumFrame,
     x: number,
     y: number,
     w: number,
     h: number,
     marginBottom: number,
   ) => {
-    const startHz = frame.startHz;
-    const endHz = frame.startHz + frame.bins.length * frame.binSizeHz;
+    const startHz = currentFrame.startHz;
+    const endHz = currentFrame.startHz + currentFrame.bins.length * currentFrame.binSizeHz;
 
     ctx.fillStyle = '#aaa';
     ctx.font = '10px monospace';
@@ -215,8 +206,7 @@ export const EnhancedRfSpectrum: React.FC<Props> = ({ frame }) => {
     for (let i = 0; i <= 5; i++) {
       const freq = startHz + (i / 5) * (endHz - startHz);
       const xPos = x + (i / 5) * w;
-      const label = formatFrequency(freq);
-      ctx.fillText(label, xPos, y + h + 18);
+      ctx.fillText(formatFrequency(freq), xPos, y + h + 18);
     }
 
     // Axis label
@@ -235,8 +225,8 @@ export const EnhancedRfSpectrum: React.FC<Props> = ({ frame }) => {
     ctx.textAlign = 'right';
 
     // Draw dB labels every 10 dB
-    for (let db = -90; db <= 0; db += 10) {
-      const yPos = y + h - ((db + 100) / 100) * h;
+    for (let db = MIN_DB + 10; db <= MAX_DB; db += 10) {
+      const yPos = y + h - ((db - MIN_DB) / (MAX_DB - MIN_DB)) * h;
       ctx.fillText(`${db}`, x - 5, yPos + 3);
     }
 
@@ -266,7 +256,7 @@ export const EnhancedRfSpectrum: React.FC<Props> = ({ frame }) => {
 
     bins.forEach((value: number, index: number) => {
       const xPos = x + (index / (bins.length - 1 || 1)) * w;
-      const yPos = y + h - ((clampDb(value) + 100) / 100) * h;
+      const yPos = y + h - ((clampDb(value) - MIN_DB) / (MAX_DB - MIN_DB)) * h;
 
       if (index === 0) {
         ctx.moveTo(xPos, yPos);
@@ -296,58 +286,73 @@ export const EnhancedRfSpectrum: React.FC<Props> = ({ frame }) => {
 
   const drawPeaks = (
     ctx: CanvasRenderingContext2D,
-    frame: RfSpectrumFrame,
+    currentFrame: RfSpectrumFrame,
     bins: number[],
     x: number,
     y: number,
     w: number,
     h: number,
   ) => {
-    if (!frame.peaks) return;
+    if (!currentFrame.peaks) return;
 
-    ctx.fillStyle = '#e74c3c';
+    // Peaks arrive sorted by SNR (strongest first), so labels go to the
+    // strongest peaks and weaker neighbors are skipped when they would overlap.
+    const labeledXs: number[] = [];
 
-    frame.peaks.forEach((peak: { frequency: number; power: number }) => {
-      const bin = Math.round((peak.frequency - frame.startHz) / frame.binSizeHz);
+    currentFrame.peaks.forEach((peak: { frequency: number; power: number }, index: number) => {
+      const bin = Math.round((peak.frequency - currentFrame.startHz) / currentFrame.binSizeHz);
       if (bin < 0 || bin >= bins.length) return;
 
       const xPos = x + (bin / (bins.length - 1 || 1)) * w;
-      const yPos = y + h - ((clampDb(peak.power) + 100) / 100) * h;
+      const yPos = y + h - ((clampDb(peak.power) - MIN_DB) / (MAX_DB - MIN_DB)) * h;
 
       // Draw marker
+      ctx.fillStyle = '#e74c3c';
       ctx.fillRect(xPos - 1.5, yPos - 5, 3, 10);
 
-      // Draw label for top peaks
-      if (frame.peaks && frame.peaks.indexOf(peak) < 5) {
-        ctx.save();
-        ctx.fillStyle = '#fff';
-        ctx.font = '9px monospace';
-        ctx.textAlign = 'center';
-        ctx.fillText(formatFrequency(peak.frequency), xPos, yPos - 10);
-        ctx.fillText(formatPower(peak.power), xPos, yPos - 20);
-        ctx.restore();
-      }
+      if (index >= PEAK_LABEL_COUNT) return;
+
+      // Skip the label if it would collide with an already-drawn one
+      if (labeledXs.some((lx) => Math.abs(lx - xPos) < PEAK_LABEL_MIN_GAP_PX)) return;
+      labeledXs.push(xPos);
+
+      // Clamp the label x so text stays inside the plot area
+      const labelX = Math.max(x + 25, Math.min(x + w - 25, xPos));
+      const labelY = Math.max(y + 22, yPos - 10);
+
+      ctx.save();
+      ctx.fillStyle = '#fff';
+      ctx.font = '9px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(formatFrequency(peak.frequency), labelX, labelY);
+      ctx.fillText(formatPower(peak.power), labelX, labelY - 10);
+      ctx.restore();
     });
   };
 
   const toggleHold = () => {
-    if (hold.enabled) {
-      setHold({ enabled: false, bins: null });
+    if (holdEnabled) {
+      holdBinsRef.current = null;
+      setHoldEnabled(false);
     } else {
-      setHold({ enabled: true, bins: frame ? [...frame.bins] : null });
+      holdBinsRef.current = frameRef.current ? [...frameRef.current.bins] : null;
+      setHoldEnabled(true);
     }
   };
 
   const toggleMaxHold = () => {
-    if (maxHold.enabled) {
-      setMaxHold({ enabled: false, bins: [] });
+    if (maxHoldEnabled) {
+      maxHoldBinsRef.current = null;
+      setMaxHoldEnabled(false);
     } else {
-      setMaxHold({ enabled: true, bins: frame ? [...frame.bins] : [] });
+      maxHoldBinsRef.current = frameRef.current ? [...frameRef.current.bins] : null;
+      setMaxHoldEnabled(true);
     }
   };
 
   const clearMaxHold = () => {
-    setMaxHold({ enabled: maxHold.enabled, bins: frame ? [...frame.bins] : [] });
+    maxHoldBinsRef.current = frameRef.current ? [...frameRef.current.bins] : null;
+    draw();
   };
 
   return (
@@ -364,30 +369,30 @@ export const EnhancedRfSpectrum: React.FC<Props> = ({ frame }) => {
           style={{
             padding: '4px 8px',
             fontSize: '11px',
-            background: hold.enabled ? '#3498db' : '#555',
+            background: holdEnabled ? '#3498db' : '#555',
             color: '#fff',
             border: 'none',
             borderRadius: '3px',
             cursor: 'pointer',
           }}
         >
-          {hold.enabled ? 'Unhold' : 'Hold'}
+          {holdEnabled ? 'Unhold' : 'Hold'}
         </button>
         <button
           onClick={toggleMaxHold}
           style={{
             padding: '4px 8px',
             fontSize: '11px',
-            background: maxHold.enabled ? '#e74c3c' : '#555',
+            background: maxHoldEnabled ? '#e74c3c' : '#555',
             color: '#fff',
             border: 'none',
             borderRadius: '3px',
             cursor: 'pointer',
           }}
         >
-          {maxHold.enabled ? 'Max' : 'Max'}
+          {maxHoldEnabled ? 'Max: On' : 'Max Hold'}
         </button>
-        {maxHold.enabled && (
+        {maxHoldEnabled && (
           <button
             onClick={clearMaxHold}
             style={{

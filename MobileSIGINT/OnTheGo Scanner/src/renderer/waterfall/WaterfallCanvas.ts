@@ -21,10 +21,18 @@ export interface WaterfallCanvasOptions {
     stop: number;
     color: [number, number, number];
   }>;
+  /**
+   * Pin normalization to a fixed log10-magnitude range instead of auto-ranging
+   * against the observed min/max. Use when the input has a known scale (e.g.
+   * dBFS converted to linear: minLog = minDb / 10, maxLog = maxDb / 10) so an
+   * on-screen color legend stays truthful and a single strong burst cannot
+   * permanently compress the contrast.
+   */
+  fixedLogRange?: { minLog: number; maxLog: number };
 }
 
 export class WaterfallCanvas {
-  public readonly worker: Worker;
+  private workerInstance: Worker | null = null;
 
   private readonly canvas: HTMLCanvasElement;
   private readonly ctx: CanvasRenderingContext2D;
@@ -44,6 +52,7 @@ export class WaterfallCanvas {
   private maxMagnitude = 0;
   private minLog = Math.log10(MAG_EPSILON);
   private maxLog = Math.log10(1);
+  private readonly fixedLogRange: { minLog: number; maxLog: number } | null;
 
   constructor(canvas: HTMLCanvasElement, options?: WaterfallCanvasOptions) {
     if (!(canvas instanceof HTMLCanvasElement)) {
@@ -70,13 +79,28 @@ export class WaterfallCanvas {
       return a.stop < b.stop ? -1 : 1;
     });
 
+    this.fixedLogRange = options?.fixedLogRange ?? null;
+    if (this.fixedLogRange) {
+      this.minLog = this.fixedLogRange.minLog;
+      this.maxLog = this.fixedLogRange.maxLog;
+    }
+
     this.palette = this.buildPalette(this.colorStops);
     this.ring = this.createRing(this.maxRows);
     this.syncCanvasSize(1);
+  }
 
-    this.worker = new FFTWorkerConstructor();
-    this.worker.addEventListener('message', this.handleWorkerMessage);
-    this.worker.addEventListener('error', this.handleWorkerError);
+  /**
+   * FFT worker for callers that feed raw IQ samples. Created lazily on first
+   * access — callers that push magnitude rows directly never pay for it.
+   */
+  public get worker(): Worker {
+    if (!this.workerInstance) {
+      this.workerInstance = new FFTWorkerConstructor();
+      this.workerInstance.addEventListener('message', this.handleWorkerMessage);
+      this.workerInstance.addEventListener('error', this.handleWorkerError);
+    }
+    return this.workerInstance;
   }
 
   public pushRow(magnitudes: Float32Array): void {
@@ -102,9 +126,12 @@ export class WaterfallCanvas {
   }
 
   public terminate(): void {
-    this.worker.removeEventListener('message', this.handleWorkerMessage);
-    this.worker.removeEventListener('error', this.handleWorkerError);
-    this.worker.terminate();
+    if (this.workerInstance) {
+      this.workerInstance.removeEventListener('message', this.handleWorkerMessage);
+      this.workerInstance.removeEventListener('error', this.handleWorkerError);
+      this.workerInstance.terminate();
+      this.workerInstance = null;
+    }
   }
 
   public setMaxRows(maxRows: number): void {
@@ -144,26 +171,25 @@ export class WaterfallCanvas {
     this.rowCount = 0;
     this.minMagnitude = Number.POSITIVE_INFINITY;
     this.maxMagnitude = 0;
-    this.minLog = Math.log10(MAG_EPSILON);
-    this.maxLog = Math.log10(1);
+    if (this.fixedLogRange) {
+      this.minLog = this.fixedLogRange.minLog;
+      this.maxLog = this.fixedLogRange.maxLog;
+    } else {
+      this.minLog = Math.log10(MAG_EPSILON);
+      this.maxLog = Math.log10(1);
+    }
     this.ring = this.createRing(this.maxRows);
     this.syncCanvasSize(1);
     this.clearCanvas();
   }
 
+  /**
+   * Size the canvas backing store to the data (one pixel per bin/row).
+   * CSS presentation size is deliberately left to the embedding component.
+   */
   private syncCanvasSize(rows: number = Math.max(this.rowCount, 1)): void {
     const width = this.fftSize ?? 1;
     const height = Math.max(1, rows);
-
-    const cssWidth = `${width}px`;
-    const cssHeight = `${height}px`;
-
-    if (this.canvas.style.width !== cssWidth) {
-      this.canvas.style.width = cssWidth;
-    }
-    if (this.canvas.style.height !== cssHeight) {
-      this.canvas.style.height = cssHeight;
-    }
 
     if (this.canvas.width !== width) {
       this.canvas.width = width;
@@ -218,6 +244,10 @@ export class WaterfallCanvas {
   }
 
   private updateMagnitudeRange(row: Float32Array): void {
+    if (this.fixedLogRange) {
+      return;
+    }
+
     let localMin = Number.POSITIVE_INFINITY;
     let localMax = Number.NEGATIVE_INFINITY;
 

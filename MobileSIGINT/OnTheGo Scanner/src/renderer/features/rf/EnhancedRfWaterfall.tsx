@@ -14,18 +14,16 @@ import React, { useEffect, useRef } from 'react';
 
 import type { RfSpectrumFrame } from '../../hooks/useRfStream';
 import { useSettings } from '../../hooks/useSettings';
+import { formatFrequency } from '../../utils/frequency';
 import { WaterfallCanvas } from '../../waterfall/WaterfallCanvas';
 
 interface Props {
   frame: RfSpectrumFrame | null;
 }
 
-const formatFrequency = (hz: number): string => {
-  if (hz >= 1e9) return `${(hz / 1e9).toFixed(2)} GHz`;
-  if (hz >= 1e6) return `${(hz / 1e6).toFixed(2)} MHz`;
-  if (hz >= 1e3) return `${(hz / 1e3).toFixed(1)} kHz`;
-  return `${hz.toFixed(0)} Hz`;
-};
+// Display range in dBFS; must stay in sync with the colorbar labels below.
+const MIN_DB = -100;
+const MAX_DB = 0;
 
 export const EnhancedRfWaterfall: React.FC<Props> = ({ frame }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -44,9 +42,12 @@ export const EnhancedRfWaterfall: React.FC<Props> = ({ frame }) => {
       // Get maxRows from settings, default to 100
       const maxRows = settings?.performance?.waterfallMaxRows ?? 100;
 
-      // Create waterfall with custom color palette
+      // Create waterfall with custom color palette. The normalization range is
+      // pinned to the dBFS display range (log10 of linear magnitude = dB / 10)
+      // so the colorbar stays truthful and contrast is stable over time.
       waterfallRef.current = new WaterfallCanvas(canvas, {
         maxRows,
+        fixedLogRange: { minLog: MIN_DB / 10, maxLog: MAX_DB / 10 },
         colorStops: [
           { stop: 0, color: [0, 0, 20] }, // Dark blue (weak)
           { stop: 0.2, color: [0, 32, 128] }, // Blue
@@ -75,13 +76,12 @@ export const EnhancedRfWaterfall: React.FC<Props> = ({ frame }) => {
       return;
     }
 
-    // Convert dB to magnitude (0-1 range)
+    // Convert dBFS to linear magnitude; WaterfallCanvas log-normalizes against
+    // the fixed range configured above.
     const magnitudes = new Float32Array(frame.bins.length);
     for (let i = 0; i < frame.bins.length; i++) {
-      const db = frame.bins[i];
-      // Convert dB to linear scale (assuming -100 to 0 dB range)
-      const linear = Math.pow(10, db / 10);
-      magnitudes[i] = Math.max(0, Math.min(linear, 1));
+      const db = Math.max(MIN_DB, Math.min(MAX_DB, frame.bins[i]));
+      magnitudes[i] = Math.pow(10, db / 10);
     }
 
     waterfall.pushRow(magnitudes);
